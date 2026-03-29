@@ -4,23 +4,52 @@ export interface Skill {
   category?: string;
 }
 
+export interface CourseEntry {
+  code: string;
+  name: string;
+  level: "beginner" | "intermediate" | "advanced";
+}
+
+export const STUDENT_LEVELS = [100, 200, 300, 400] as const;
+export type StudentLevel = typeof STUDENT_LEVELS[number];
+
 export interface Profile {
   id: string;
   name: string;
   email: string;
   faculty: string;
+  student_level: StudentLevel | null;
   bio: string;
   avatar_url: string;
   skills_to_teach: Skill[];
   skills_to_learn: Skill[];
+  courses_to_teach: CourseEntry[];
+  courses_to_learn: CourseEntry[];
   availability: string[];
   preferred_mode: "online" | "offline" | "both";
   contact: string;
+  whatsapp: string;
+  session_duration_pref: 30 | 60 | 120;
+  learning_goals: Record<string, string>;
+  profile_visibility: "public" | "department";
+  response_rate: number;
   rating: number;
   total_ratings: number;
   xp: number;
   last_seen: string;
   created_at: string;
+}
+
+export interface TeacherSubRatings {
+  teaching_clarity: number;
+  patience: number;
+  punctuality: number;
+}
+
+export interface LearnerSubRatings {
+  engagement: number;
+  preparation: number;
+  punctuality: number;
 }
 
 export interface Session {
@@ -30,6 +59,7 @@ export interface Session {
   skill: string;
   date: string;
   time: string;
+  duration: number; // minutes
   mode: "online" | "offline";
   location: string;
   status: "pending" | "accepted" | "completed" | "cancelled";
@@ -37,8 +67,23 @@ export interface Session {
   learner_rating?: number;
   teacher_feedback?: string;
   learner_feedback?: string;
+  teacher_sub_ratings?: LearnerSubRatings | null;
+  learner_sub_ratings?: TeacherSubRatings | null;
+  checked_in_at?: string | null;
+  reschedule_date?: string | null;
+  reschedule_time?: string | null;
+  reschedule_proposed_by?: string | null;
   notes: string;
   created_at: string;
+}
+
+export interface SessionStats {
+  total_completed: number;
+  total_hours: number;
+  most_taught_skill: string | null;
+  learning_streak: number;
+  sessions_as_teacher: number;
+  sessions_as_learner: number;
 }
 
 export interface Message {
@@ -108,6 +153,40 @@ export const SKILL_CATEGORIES = [
   "Other",
 ];
 
+export interface StudyGroup {
+  id: string;
+  name: string;
+  course_code: string;
+  department: string;
+  creator_id: string;
+  description: string;
+  max_members: number;
+  schedule_days: string[];
+  schedule_time: string;
+  location: string;
+  created_at: string;
+  member_count?: number;
+}
+
+export interface GroupMember {
+  id: string;
+  group_id: string;
+  user_id: string;
+  role: "coordinator" | "member";
+  status: "pending" | "approved";
+  joined_at: string;
+  profile?: Profile;
+}
+
+export interface GroupMessage {
+  id: string;
+  group_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  sender?: Profile;
+}
+
 export const DAYS_OF_WEEK = [
   "Monday",
   "Tuesday",
@@ -117,3 +196,31 @@ export const DAYS_OF_WEEK = [
   "Saturday",
   "Sunday",
 ];
+
+export type ReportReason = "harassment" | "spam" | "inappropriate" | "other";
+
+export interface Report {
+  id: string;
+  reporter_id: string;
+  reported_user_id: string;
+  reported_message_id?: string | null;
+  reason: ReportReason;
+  details: string;
+  status: "pending" | "reviewed" | "dismissed";
+  created_at: string;
+}
+
+export interface ReviewHelpfulVote {
+  id: string;
+  session_id: string;
+  voter_id: string;
+  created_at: string;
+}
+
+export interface ReviewReply {
+  id: string;
+  session_id: string;
+  teacher_id: string;
+  content: string;
+  created_at: string;
+}

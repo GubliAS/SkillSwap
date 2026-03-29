@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { updateProfile } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
-import { Skill, FACULTIES, SKILL_CATEGORIES, DAYS_OF_WEEK } from "@/lib/types";
+import { Skill, CourseEntry, FACULTIES, SKILL_CATEGORIES, DAYS_OF_WEEK, STUDENT_LEVELS, StudentLevel } from "@/lib/types";
 import { toast } from "sonner";
 import { Plus, X, Camera } from "lucide-react";
 
@@ -16,7 +16,11 @@ export default function ProfilePage() {
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [faculty, setFaculty] = useState("");
+  const [studentLevel, setStudentLevel] = useState<StudentLevel | null>(null);
   const [contact, setContact] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [sessionDurationPref, setSessionDurationPref] = useState<30 | 60 | 120>(60);
+  const [learningGoals, setLearningGoals] = useState<Record<string, string>>({});
   const [preferredMode, setPreferredMode] = useState("online");
   const [availability, setAvailability] = useState<string[]>([]);
   const [skillsToTeach, setSkillsToTeach] = useState<Skill[]>([]);
@@ -27,6 +31,15 @@ export default function ProfilePage() {
   const [newLearnSkill, setNewLearnSkill] = useState("");
   const [newLearnLevel, setNewLearnLevel] = useState<Skill["level"]>("beginner");
   const [newLearnCategory, setNewLearnCategory] = useState("Other");
+  const [coursesToTeach, setCoursesToTeach] = useState<CourseEntry[]>([]);
+  const [newTeachCode, setNewTeachCode] = useState("");
+  const [newTeachCourseName, setNewTeachCourseName] = useState("");
+  const [newTeachCourseLevel, setNewTeachCourseLevel] = useState<CourseEntry["level"]>("intermediate");
+  const [coursesToLearn, setCoursesToLearn] = useState<CourseEntry[]>([]);
+  const [newLearnCode, setNewLearnCode] = useState("");
+  const [newLearnCourseName, setNewLearnCourseName] = useState("");
+  const [newLearnCourseLevel, setNewLearnCourseLevel] = useState<CourseEntry["level"]>("beginner");
+  const [profileVisibility, setProfileVisibility] = useState<"public" | "department">("public");
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
@@ -39,11 +52,18 @@ export default function ProfilePage() {
       setName(user.name || "");
       setBio(user.bio || "");
       setFaculty(user.faculty || "");
+      setStudentLevel(user.student_level || null);
       setContact(user.contact || "");
+      setWhatsapp(user.whatsapp || "");
+      setSessionDurationPref(user.session_duration_pref || 60);
+      setLearningGoals(user.learning_goals || {});
+      setProfileVisibility(user.profile_visibility || "public");
       setPreferredMode(user.preferred_mode || "online");
       setAvailability(user.availability || []);
       setSkillsToTeach(user.skills_to_teach || []);
       setSkillsToLearn(user.skills_to_learn || []);
+      setCoursesToTeach(user.courses_to_teach || []);
+      setCoursesToLearn(user.courses_to_learn || []);
     }
   }, [user]);
 
@@ -65,6 +85,20 @@ export default function ProfilePage() {
     setNewLearnSkill("");
   };
 
+  const addTeachCourse = () => {
+    if (!newTeachCode.trim() || !newTeachCourseName.trim()) return;
+    setCoursesToTeach((prev) => [...prev, { code: newTeachCode.trim().toUpperCase(), name: newTeachCourseName.trim(), level: newTeachCourseLevel }]);
+    setNewTeachCode("");
+    setNewTeachCourseName("");
+  };
+
+  const addLearnCourse = () => {
+    if (!newLearnCode.trim() || !newLearnCourseName.trim()) return;
+    setCoursesToLearn((prev) => [...prev, { code: newLearnCode.trim().toUpperCase(), name: newLearnCourseName.trim(), level: newLearnCourseLevel }]);
+    setNewLearnCode("");
+    setNewLearnCourseName("");
+  };
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -84,11 +118,17 @@ export default function ProfilePage() {
     if (!user) return;
     setSaving(true);
     const { error } = await updateProfile(user.id, {
-      name, bio, faculty, contact,
+      name, bio, faculty, contact, whatsapp,
+      student_level: studentLevel,
+      session_duration_pref: sessionDurationPref,
+      learning_goals: learningGoals,
+      profile_visibility: profileVisibility,
       preferred_mode: preferredMode as "online" | "offline" | "both",
       availability,
       skills_to_teach: skillsToTeach,
       skills_to_learn: skillsToLearn,
+      courses_to_teach: coursesToTeach,
+      courses_to_learn: coursesToLearn,
     });
     if (error) {
       toast.error("Failed to save profile");
@@ -154,9 +194,36 @@ export default function ProfilePage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Contact (WhatsApp / phone)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Year / Level</label>
+            <select value={studentLevel ?? ""} onChange={(e) => setStudentLevel(e.target.value ? Number(e.target.value) as StudentLevel : null)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+              <option value="">Select level</option>
+              {STUDENT_LEVELS.map((l) => <option key={l} value={l}>Level {l}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone / Contact</label>
             <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="+233..."
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">WhatsApp Number</label>
+            <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+233XXXXXXXXX"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400" />
+            <p className="text-xs text-gray-400 mt-1">Shown as a contact button on your public profile</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Preferred Session Duration</label>
+            <div className="flex gap-2">
+              {([30, 60, 120] as const).map((d) => (
+                <button key={d} type="button" onClick={() => setSessionDurationPref(d)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    sessionDurationPref === d ? "bg-navy-800 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}>
+                  {d === 30 ? "30 min" : d === 60 ? "1 hour" : "2 hours"}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Preferred Mode</label>
@@ -185,6 +252,22 @@ export default function ProfilePage() {
                 availability.includes(day) ? "bg-navy-800 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}>
               {day}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Profile Visibility */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-navy-800 mb-1">Profile Visibility</h3>
+        <p className="text-xs text-gray-400 mb-3">Control who can discover your profile on the Explore page.</p>
+        <div className="flex gap-2">
+          {(["public", "department"] as const).map((v) => (
+            <button key={v} type="button" onClick={() => setProfileVisibility(v)}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                profileVisibility === v ? "bg-navy-800 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}>
+              {v === "public" ? "Public" : "Department Only"}
             </button>
           ))}
         </div>
@@ -251,6 +334,91 @@ export default function ProfilePage() {
             {SKILL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
           <button onClick={addLearnSkill} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-violet-500 text-white text-sm font-medium hover:bg-violet-400 transition-colors">
+            <Plus className="w-4 h-4" /> Add
+          </button>
+        </div>
+      </div>
+
+      {/* Learning Goals */}
+      {skillsToLearn.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 className="text-sm font-semibold text-navy-800 mb-1">Learning Goals</h3>
+          <p className="text-xs text-gray-400 mb-3">What do you want to achieve with each skill? (optional)</p>
+          <div className="space-y-3">
+            {skillsToLearn.map((s) => (
+              <div key={s.name}>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{s.name}</label>
+                <input
+                  value={learningGoals[s.name] || ""}
+                  onChange={(e) => setLearningGoals((prev) => ({ ...prev, [s.name]: e.target.value }))}
+                  placeholder={`e.g. Pass the final exam, build a project...`}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Courses I Can Help With */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-navy-800 mb-1">Academic Courses I Can Help With</h3>
+        <p className="text-xs text-gray-400 mb-3">Add courses by code so peers can find you for academic help.</p>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {coursesToTeach.map((c, i) => (
+            <span key={i} className="flex items-center gap-1 px-3 py-1 bg-sky-100 text-sky-700 text-xs font-medium rounded-full">
+              <span className="font-bold">{c.code}</span> – {c.name}
+              <button onClick={() => setCoursesToTeach((prev) => prev.filter((_, j) => j !== i))}>
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <input value={newTeachCode} onChange={(e) => setNewTeachCode(e.target.value)}
+            placeholder="Code e.g. CSM 399" className="w-32 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400" />
+          <input value={newTeachCourseName} onChange={(e) => setNewTeachCourseName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTeachCourse())}
+            placeholder="Course name" className="flex-1 min-w-[120px] px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400" />
+          <select value={newTeachCourseLevel} onChange={(e) => setNewTeachCourseLevel(e.target.value as CourseEntry["level"])}
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+          <button onClick={addTeachCourse} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-sky-500 text-white text-sm font-medium hover:bg-sky-400 transition-colors">
+            <Plus className="w-4 h-4" /> Add
+          </button>
+        </div>
+      </div>
+
+      {/* Courses I Need Help With */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-navy-800 mb-1">Academic Courses I Need Help With</h3>
+        <p className="text-xs text-gray-400 mb-3">Add courses you&apos;re struggling with so tutors can find you.</p>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {coursesToLearn.map((c, i) => (
+            <span key={i} className="flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+              <span className="font-bold">{c.code}</span> – {c.name}
+              <button onClick={() => setCoursesToLearn((prev) => prev.filter((_, j) => j !== i))}>
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <input value={newLearnCode} onChange={(e) => setNewLearnCode(e.target.value)}
+            placeholder="Code e.g. MATH 223" className="w-32 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400" />
+          <input value={newLearnCourseName} onChange={(e) => setNewLearnCourseName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLearnCourse())}
+            placeholder="Course name" className="flex-1 min-w-[120px] px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400" />
+          <select value={newLearnCourseLevel} onChange={(e) => setNewLearnCourseLevel(e.target.value as CourseEntry["level"])}
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+          <button onClick={addLearnCourse} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-400 transition-colors">
             <Plus className="w-4 h-4" /> Add
           </button>
         </div>

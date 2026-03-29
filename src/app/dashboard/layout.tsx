@@ -14,6 +14,7 @@ const DASH_LINKS = [
   { href: "/dashboard/matches", label: "Matches" },
   { href: "/dashboard/swaps", label: "Sessions" },
   { href: "/dashboard/messages", label: "Messages" },
+  { href: "/dashboard/groups", label: "Groups" },
   { href: "/dashboard/leaderboard", label: "Leaderboard" },
   { href: "/dashboard/profile", label: "Profile" },
 ];
@@ -29,6 +30,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!user) return;
     getNotifications(user.id).then(setNotifications);
     const interval = setInterval(() => getNotifications(user.id).then(setNotifications), 30000);
+    // Check for session reminders on load (fire-and-forget)
+    fetch("/api/sessions/reminders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id }),
+    }).catch(() => {});
     return () => clearInterval(interval);
   }, [user]);
 

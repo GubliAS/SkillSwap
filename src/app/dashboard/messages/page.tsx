@@ -7,11 +7,12 @@ import {
   getConversations, getProfileById, getMessagesBetween, sendMessage,
   markMessagesAsRead, deleteMessage, editMessage, addReaction, removeReaction,
   getReactionsForMessages, searchMessages, togglePinMessage, forwardMessage,
+  reportUser, reportMessage, blockUser,
 } from "@/lib/data";
-import { Profile, Message, Reaction } from "@/lib/types";
+import { Profile, Message, Reaction, ReportReason } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { Send, Search, Trash2, Edit2, Pin, Forward, Smile, Reply, X, Check, CheckCheck } from "lucide-react";
+import { Send, Search, Trash2, Edit2, Pin, Forward, Smile, Reply, X, Check, CheckCheck, MoreVertical, Flag, Ban } from "lucide-react";
 
 const EMOJI_LIST = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
@@ -33,6 +34,11 @@ function MessagesInner() {
   const [editContent, setEditContent] = useState("");
   const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<string | null>(null);
   const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
+  const [showChatMenu, setShowChatMenu] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReason>("harassment");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { if (!isLoading && !user) router.push("/login"); }, [isLoading, user, router]);
@@ -127,6 +133,28 @@ function MessagesInner() {
     toast.success("Message forwarded!");
   };
 
+  const handleReport = async () => {
+    if (!user || !activePeerId) return;
+    setReportSubmitting(true);
+    const { error } = await reportUser(user.id, activePeerId, reportReason, reportDetails);
+    setReportSubmitting(false);
+    if (error) { toast.error("Failed to submit report"); return; }
+    toast.success("Report submitted. We'll review it shortly.");
+    setShowReportDialog(false);
+    setReportReason("harassment");
+    setReportDetails("");
+  };
+
+  const handleBlock = async () => {
+    if (!user || !activePeerId) return;
+    if (!confirm("Block this user? They won't appear in your explore results or matches.")) return;
+    const { error } = await blockUser(user.id, activePeerId);
+    if (error) { toast.error("Failed to block user"); return; }
+    toast.success("User blocked");
+    setActivePeerId(null);
+    loadConversations();
+  };
+
   if (isLoading || !user) return null;
 
   const activePeer = activePeerId ? peerProfiles[activePeerId] : null;
@@ -191,6 +219,23 @@ function MessagesInner() {
             <button onClick={() => setShowSearch(!showSearch)} className="text-gray-400 hover:text-navy-800 transition-colors">
               <Search className="w-5 h-5" />
             </button>
+            <div className="relative">
+              <button onClick={() => setShowChatMenu(!showChatMenu)} className="text-gray-400 hover:text-navy-800 transition-colors">
+                <MoreVertical className="w-5 h-5" />
+              </button>
+              {showChatMenu && (
+                <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg border border-gray-200 shadow-lg z-50 py-1">
+                  <button onClick={() => { setShowChatMenu(false); setShowReportDialog(true); }}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <Flag className="w-4 h-4 text-amber-500" /> Report User
+                  </button>
+                  <button onClick={() => { setShowChatMenu(false); handleBlock(); }}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                    <Ban className="w-4 h-4" /> Block User
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Search bar */}
@@ -360,6 +405,35 @@ function MessagesInner() {
               })}
             </div>
             <button onClick={() => setForwardMsg(null)} className="w-full mt-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+          </div>
+        </div>
+      )}
+      {/* Report dialog */}
+      {showReportDialog && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="font-semibold text-navy-800 mb-1">Report User</h3>
+            <p className="text-xs text-gray-500 mb-4">Why are you reporting {activePeer?.name || "this user"}?</p>
+            <div className="space-y-3 mb-4">
+              <select value={reportReason} onChange={(e) => setReportReason(e.target.value as ReportReason)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+                <option value="harassment">Harassment</option>
+                <option value="spam">Spam</option>
+                <option value="inappropriate">Inappropriate Content</option>
+                <option value="other">Other</option>
+              </select>
+              <textarea value={reportDetails} onChange={(e) => setReportDetails(e.target.value)}
+                placeholder="Additional details (optional)..." rows={3}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none" />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { setShowReportDialog(false); setReportDetails(""); }}
+                className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+              <button onClick={handleReport} disabled={reportSubmitting}
+                className="flex-1 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-500 disabled:opacity-50">
+                {reportSubmitting ? "Submitting..." : "Submit Report"}
+              </button>
+            </div>
           </div>
         </div>
       )}

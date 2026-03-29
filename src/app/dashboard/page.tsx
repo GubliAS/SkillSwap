@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { getSessionsByUser, getAllProfiles, getMatchScore, computeBadges, getNotifications } from "@/lib/data";
-import { Session, Profile, Notification } from "@/lib/types";
+import { getSessionsByUser, getAllProfiles, getMatchScore, computeBadges, getNotifications, computeSessionStats } from "@/lib/data";
+import { Session, Profile, Notification, SessionStats } from "@/lib/types";
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -13,6 +13,7 @@ export default function DashboardPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [topMatchCount, setTopMatchCount] = useState(0);
+  const [stats, setStats] = useState<SessionStats | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export default function DashboardPage() {
       const others = allProfiles.filter((p) => p.id !== user.id);
       const matches = others.filter((p) => getMatchScore(user, p) > 0);
       setTopMatchCount(matches.length);
+      setStats(computeSessionStats(sessData, user.id));
       setLoaded(true);
     };
     load();
@@ -75,6 +77,30 @@ export default function DashboardPage() {
           <p className="text-3xl font-bold text-violet-600">{loaded ? completedSessions.length : "—"}</p>
         </div>
       </div>
+
+      {/* Session stats row */}
+      {loaded && stats && stats.total_completed > 0 && (
+        <div className="grid sm:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs text-gray-400 mb-1">Hours Spent</p>
+            <p className="text-2xl font-bold text-navy-800">{stats.total_hours}<span className="text-sm font-normal text-gray-400">h</span></p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs text-gray-400 mb-1">Sessions Taught</p>
+            <p className="text-2xl font-bold text-sky-600">{stats.sessions_as_teacher}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs text-gray-400 mb-1">Sessions Learned</p>
+            <p className="text-2xl font-bold text-violet-600">{stats.sessions_as_learner}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs text-gray-400 mb-1">{stats.learning_streak > 0 ? "🔥 Learning Streak" : "Most Taught"}</p>
+            <p className="text-2xl font-bold text-emerald-600">
+              {stats.learning_streak > 0 ? `${stats.learning_streak}d` : stats.most_taught_skill || "—"}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-6 mb-6">
         {/* Recent Activity */}

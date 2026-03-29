@@ -4,9 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { searchProfiles, getTimeSinceLastSeen } from "@/lib/data";
+import { searchProfiles, getTimeSinceLastSeen, getBlockedUsers, getBlockedByUsers } from "@/lib/data";
 import { Profile, FACULTIES, SKILL_CATEGORIES } from "@/lib/types";
 import { Search } from "lucide-react";
+
+type SortOption = "best_match" | "highest_rated" | "newest";
+type ContentType = "both" | "academic" | "skills";
 
 export default function ExplorePage() {
   const { user, isLoading } = useAuth();
@@ -15,10 +18,22 @@ export default function ExplorePage() {
   const [faculty, setFaculty] = useState("");
   const [mode, setMode] = useState("");
   const [category, setCategory] = useState("");
+  const [level, setLevel] = useState("");
+  const [sort, setSort] = useState<SortOption>("best_match");
+  const [contentType, setContentType] = useState<ContentType>("both");
   const [results, setResults] = useState<Profile[]>([]);
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
   useEffect(() => { if (!isLoading && !user) router.push("/login"); }, [isLoading, user, router]);
+
+  // Load blocked user IDs on mount
+  useEffect(() => {
+    if (!user) return;
+    Promise.all([getBlockedUsers(user.id), getBlockedByUsers(user.id)]).then(([blocked, blockedBy]) => {
+      setBlockedIds(new Set([...blocked, ...blockedBy]));
+    });
+  }, [user]);
 
   const doSearch = useCallback(async () => {
     if (!user) return;
@@ -27,10 +42,19 @@ export default function ExplorePage() {
       faculty: faculty || undefined,
       mode: mode || undefined,
       category: category || undefined,
+      level: level || undefined,
+      contentType: contentType === "both" ? undefined : contentType,
+      sort,
+      currentUser: user,
     });
-    setResults(profiles.filter((p) => p.id !== user.id));
+    // Filter out: self, blocked users, and dept-only profiles from other faculties
+    setResults(profiles.filter((p) =>
+      p.id !== user.id &&
+      !blockedIds.has(p.id) &&
+      (p.profile_visibility !== "department" || p.faculty === user.faculty)
+    ));
     setLoading(false);
-  }, [query, faculty, mode, category, user]);
+  }, [query, faculty, mode, category, level, sort, contentType, user, blockedIds]);
 
   useEffect(() => { if (user) doSearch(); }, [user, doSearch]);
 
@@ -47,7 +71,7 @@ export default function ExplorePage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input value={query} onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && doSearch()}
-            placeholder="Search by name or skill..."
+            placeholder="Search by name, skill, or course code..."
             className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400" />
         </div>
         <select value={faculty} onChange={(e) => setFaculty(e.target.value)}
@@ -65,6 +89,25 @@ export default function ExplorePage() {
           className="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
           <option value="">All Categories</option>
           {SKILL_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select value={level} onChange={(e) => setLevel(e.target.value)}
+          className="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+          <option value="">Any Proficiency</option>
+          <option value="beginner">Beginner</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
+        </select>
+        <select value={contentType} onChange={(e) => setContentType(e.target.value as ContentType)}
+          className="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+          <option value="both">Academic & Skills</option>
+          <option value="academic">Academic Only</option>
+          <option value="skills">Skills Only</option>
+        </select>
+        <select value={sort} onChange={(e) => setSort(e.target.value as SortOption)}
+          className="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white">
+          <option value="best_match">Best Match</option>
+          <option value="highest_rated">Highest Rated</option>
+          <option value="newest">Newest</option>
         </select>
         <button onClick={doSearch} className="px-4 py-2 rounded-lg bg-navy-800 text-white text-sm font-medium hover:bg-navy-700 transition-colors">
           Search
@@ -107,7 +150,7 @@ export default function ExplorePage() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-navy-800 text-sm truncate">{p.name}</p>
-                      <p className="text-xs text-gray-400 truncate">{p.faculty}</p>
+                      <p className="text-xs text-gray-400 truncate">{p.faculty}{p.student_level ? ` · L${p.student_level}` : ""}</p>
                     </div>
                   </div>
                   {p.skills_to_teach.length > 0 && (

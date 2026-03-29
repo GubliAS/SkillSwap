@@ -4,12 +4,185 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { getSessionsByUser, updateSession, getProfileById, createNotification } from "@/lib/data";
-import { Session, Profile } from "@/lib/types";
+import { getSessionsByUser, updateSession, getProfileById, createNotification, submitRating } from "@/lib/data";
+import { Session, Profile, TeacherSubRatings, LearnerSubRatings } from "@/lib/types";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Star, MessageSquare, Monitor, MapPin } from "lucide-react";
+import { CheckCircle2, XCircle, Star, MessageSquare, Monitor, MapPin, Clock, RotateCcw, LogIn } from "lucide-react";
 
 type Tab = "upcoming" | "pending" | "completed" | "cancelled";
+
+// ─── Two-way Rating Dialog ───────────────────────────────────
+
+function RateDialog({
+  session,
+  role,
+  otherName,
+  onClose,
+  onSubmit,
+}: {
+  session: Session;
+  role: "teacher" | "learner";
+  otherName: string;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  const [overall, setOverall] = useState(0);
+  const [feedback, setFeedback] = useState("");
+  const [subs, setSubs] = useState({ a: 0, b: 0, c: 0 });
+  const [submitting, setSubmitting] = useState(false);
+
+  const isLearner = role === "learner";
+  const subLabels = isLearner
+    ? ["Teaching Clarity", "Patience", "Punctuality"]
+    : ["Engagement", "Preparation", "Punctuality"];
+
+  const handleSubmit = async () => {
+    if (overall === 0) return;
+    setSubmitting(true);
+    const subRatings = isLearner
+      ? ({ teaching_clarity: subs.a, patience: subs.b, punctuality: subs.c } as TeacherSubRatings)
+      : ({ engagement: subs.a, preparation: subs.b, punctuality: subs.c } as LearnerSubRatings);
+    const { error } = await submitRating(session.id, "", role, overall, feedback, subRatings);
+    setSubmitting(false);
+    if (error) { toast.error("Failed to submit rating"); return; }
+    toast.success("Rating submitted!");
+    onSubmit();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <h3 className="text-lg font-semibold text-navy-800 mb-1">
+          Rate {isLearner ? "your teacher" : "your learner"}
+        </h3>
+        <p className="text-sm text-gray-500 mb-5">How was your session with <span className="font-medium">{otherName}</span>?</p>
+
+        {/* Overall stars */}
+        <div className="mb-5">
+          <p className="text-xs font-medium text-gray-600 mb-2">Overall Experience</p>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <button key={s} onClick={() => setOverall(s)}>
+                <Star className={`w-9 h-9 transition-colors ${s <= overall ? "text-amber-500 fill-amber-500" : "text-gray-200"}`} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Sub-category ratings */}
+        <div className="mb-5 space-y-3">
+          <p className="text-xs font-medium text-gray-600">Specific Ratings (optional)</p>
+          {subLabels.map((label, idx) => {
+            const key = idx === 0 ? "a" : idx === 1 ? "b" : "c";
+            const val = subs[key as keyof typeof subs];
+            return (
+              <div key={label} className="flex items-center justify-between">
+                <span className="text-xs text-gray-600 w-32">{label}</span>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button key={s} onClick={() => setSubs((prev) => ({ ...prev, [key]: s }))}>
+                      <Star className={`w-5 h-5 transition-colors ${s <= val ? "text-amber-400 fill-amber-400" : "text-gray-200"}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Would you recommend? */}
+        <div className="mb-5">
+          <p className="text-xs font-medium text-gray-600 mb-2">Written feedback (optional)</p>
+          <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)}
+            placeholder={isLearner ? "Describe what made this session great or how it could improve..." : "How engaged and prepared was this learner?"}
+            rows={3}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none" />
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            Skip
+          </button>
+          <button onClick={handleSubmit} disabled={overall === 0 || submitting}
+            className="flex-1 py-2.5 rounded-lg bg-navy-800 text-white text-sm font-semibold hover:bg-navy-700 transition-colors disabled:opacity-50">
+            {submitting ? "Submitting..." : "Submit Rating"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reschedule Dialog ───────────────────────────────────────
+
+function RescheduleDialog({
+  session,
+  userId,
+  onClose,
+  onDone,
+}: {
+  session: Session;
+  userId: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [date, setDate] = useState(session.date || "");
+  const [time, setTime] = useState(session.time || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!date || !time) return;
+    setSaving(true);
+    await updateSession(session.id, {
+      reschedule_date: date,
+      reschedule_time: time,
+      reschedule_proposed_by: userId,
+    });
+    const otherId = session.teacher_id === userId ? session.learner_id : session.teacher_id;
+    await createNotification({
+      user_id: otherId,
+      type: "session_rescheduled",
+      title: "Reschedule Proposed",
+      message: `A new time has been proposed for your ${session.skill} session.`,
+      link: "/dashboard/swaps",
+    });
+    toast.success("Reschedule proposal sent!");
+    setSaving(false);
+    onDone();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+        <h3 className="text-lg font-semibold text-navy-800 mb-4">Propose New Time</h3>
+        <div className="space-y-3 mb-5">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">New Date</label>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">New Time</label>
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400" />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+          <button onClick={handleSave} disabled={!date || !time || saving}
+            className="flex-1 py-2.5 rounded-lg bg-navy-800 text-white text-sm font-semibold hover:bg-navy-700 transition-colors disabled:opacity-60">
+            {saving ? "Sending..." : "Propose"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────
 
 export default function SwapsPage() {
   const { user, isLoading } = useAuth();
@@ -18,10 +191,12 @@ export default function SwapsPage() {
   const [profileCache, setProfileCache] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("upcoming");
-  const [showRateDialog, setShowRateDialog] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [rating, setRating] = useState(0);
-  const [feedback, setFeedback] = useState("");
+
+  // Rate dialog state
+  const [rateSession, setRateSession] = useState<Session | null>(null);
+  const [rateRole, setRateRole] = useState<"teacher" | "learner">("learner");
+  // Reschedule dialog
+  const [rescheduleSession, setRescheduleSession] = useState<Session | null>(null);
 
   useEffect(() => {
     if (!isLoading && !user) router.push("/login");
@@ -62,15 +237,21 @@ export default function SwapsPage() {
 
   const handleCancel = async (session: Session) => {
     await updateSession(session.id, { status: "cancelled" });
-    const otherUserId = session.teacher_id === user!.id ? session.learner_id : session.teacher_id;
+    const otherId = session.teacher_id === user!.id ? session.learner_id : session.teacher_id;
     await createNotification({
-      user_id: otherUserId,
+      user_id: otherId,
       type: "session_cancelled",
       title: "Session Cancelled",
       message: `Your ${session.skill} session has been cancelled.`,
       link: "/dashboard/swaps",
     });
     toast.info("Session cancelled");
+    fetchSessions();
+  };
+
+  const handleCheckIn = async (session: Session) => {
+    await updateSession(session.id, { checked_in_at: new Date().toISOString() });
+    toast.success("Checked in! Session is now in progress.");
     fetchSessions();
   };
 
@@ -89,24 +270,28 @@ export default function SwapsPage() {
         updateProfile(session.learner_id, { xp: (learner.xp || 0) + 50 })
       );
     }
-    toast.success("Session marked as complete! +50 XP each");
+    toast.success("Session complete! +50 XP each 🎉");
     fetchSessions();
-    setSelectedSession(session);
-    setShowRateDialog(true);
+    // Open rating dialog for current user's role
+    const role = session.teacher_id === user!.id ? "teacher" : "learner";
+    setRateRole(role);
+    setRateSession(session);
   };
 
-  const handleRate = async () => {
-    if (!selectedSession || !user || rating === 0) return;
-    const isTeacher = selectedSession.teacher_id === user.id;
-    const updates: Partial<Session> = isTeacher
-      ? { teacher_rating: rating, teacher_feedback: feedback }
-      : { learner_rating: rating, learner_feedback: feedback };
-    await updateSession(selectedSession.id, updates);
-    toast.success("Rating submitted!");
-    setShowRateDialog(false);
-    setRating(0);
-    setFeedback("");
-    setSelectedSession(null);
+  const handleRebook = async (session: Session) => {
+    const otherId = session.teacher_id === user!.id ? session.learner_id : session.teacher_id;
+    router.push(`/dashboard/profile/${otherId}`);
+  };
+
+  const handleAcceptReschedule = async (session: Session) => {
+    await updateSession(session.id, {
+      date: session.reschedule_date!,
+      time: session.reschedule_time!,
+      reschedule_date: null,
+      reschedule_time: null,
+      reschedule_proposed_by: null,
+    });
+    toast.success("Reschedule accepted!");
     fetchSessions();
   };
 
@@ -167,7 +352,10 @@ export default function SwapsPage() {
             const otherId = isTeacher ? session.learner_id : session.teacher_id;
             const other = profileCache[otherId];
             const hasRated = isTeacher ? !!session.teacher_rating : !!session.learner_rating;
+            const otherHasRated = isTeacher ? !!session.learner_rating : !!session.teacher_rating;
             const initials = (other?.name || "?").split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+            const isCheckedIn = !!session.checked_in_at;
+            const rescheduleProposedByOther = session.reschedule_date && session.reschedule_proposed_by !== user.id;
 
             return (
               <div key={session.id} className="bg-white rounded-xl border border-gray-200 p-5">
@@ -187,7 +375,7 @@ export default function SwapsPage() {
                     </div>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badgeColor[session.status]}`}>
-                    {session.status}
+                    {session.status === "accepted" && isCheckedIn ? "In Progress" : session.status}
                   </span>
                 </div>
 
@@ -195,18 +383,56 @@ export default function SwapsPage() {
                   <span>{new Date(session.date).toLocaleDateString()} at {session.time}</span>
                   <span className="flex items-center gap-1">
                     {session.mode === "online" ? <Monitor className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
-                    {session.mode}
+                    {session.mode === "online" ? "Online" : session.location || "In-person"}
                   </span>
+                  {session.duration && session.duration !== 60 && (
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{session.duration}min</span>
+                  )}
                 </div>
 
-                {session.status === "completed" && (session.teacher_rating || session.learner_rating) && (
-                  <div className="text-xs text-gray-500 mb-3 space-y-0.5">
-                    {session.teacher_rating && <p>⭐ Teacher: {session.teacher_rating}/5 {session.teacher_feedback && `— "${session.teacher_feedback}"`}</p>}
-                    {session.learner_rating && <p>⭐ Learner: {session.learner_rating}/5 {session.learner_feedback && `— "${session.learner_feedback}"`}</p>}
+                {/* Reschedule proposal from other party */}
+                {rescheduleProposedByOther && (
+                  <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs">
+                    <p className="font-medium text-amber-800 mb-1">Reschedule proposed</p>
+                    <p className="text-amber-700">{new Date(session.reschedule_date!).toLocaleDateString()} at {session.reschedule_time}</p>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => handleAcceptReschedule(session)}
+                        className="px-3 py-1 rounded-md bg-emerald-500 text-white font-medium hover:bg-emerald-400">
+                        Accept
+                      </button>
+                      <button onClick={() => updateSession(session.id, { reschedule_date: null, reschedule_time: null, reschedule_proposed_by: null }).then(fetchSessions)}
+                        className="px-3 py-1 rounded-md bg-gray-100 text-gray-600 font-medium hover:bg-gray-200">
+                        Decline
+                      </button>
+                    </div>
                   </div>
                 )}
 
-                <div className="flex gap-2">
+                {/* Ratings display for completed */}
+                {session.status === "completed" && (session.teacher_rating || session.learner_rating) && (
+                  <div className="text-xs text-gray-500 mb-3 space-y-1 bg-gray-50 rounded-lg p-3">
+                    {session.learner_rating && (
+                      <div>
+                        <span className="font-medium">Teacher rated: </span>
+                        {"⭐".repeat(session.learner_rating)} {session.learner_rating}/5
+                        {session.learner_feedback && <span className="italic text-gray-400"> — "{session.learner_feedback}"</span>}
+                      </div>
+                    )}
+                    {session.teacher_rating && (
+                      <div>
+                        <span className="font-medium">Learner rated: </span>
+                        {"⭐".repeat(session.teacher_rating)} {session.teacher_rating}/5
+                        {session.teacher_feedback && <span className="italic text-gray-400"> — "{session.teacher_feedback}"</span>}
+                      </div>
+                    )}
+                    {otherHasRated && !hasRated && (
+                      <p className="text-amber-600 font-medium">⚠ {other?.name} has rated — your turn!</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex flex-wrap gap-2">
                   {session.status === "pending" && session.teacher_id === user.id && (
                     <>
                       <button onClick={() => handleAccept(session)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition-colors">
@@ -224,6 +450,11 @@ export default function SwapsPage() {
                   )}
                   {session.status === "accepted" && (
                     <>
+                      {!isCheckedIn && (
+                        <button onClick={() => handleCheckIn(session)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-medium hover:bg-emerald-200 transition-colors">
+                          <LogIn className="w-3.5 h-3.5" /> Check In
+                        </button>
+                      )}
                       <button onClick={() => handleComplete(session)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-sky-500 text-white text-xs font-medium hover:bg-sky-400 transition-colors">
                         <CheckCircle2 className="w-3.5 h-3.5" /> Mark Complete
                       </button>
@@ -232,15 +463,28 @@ export default function SwapsPage() {
                           <MessageSquare className="w-3.5 h-3.5" /> Chat
                         </button>
                       </Link>
+                      {!session.reschedule_date && (
+                        <button onClick={() => setRescheduleSession(session)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-medium hover:bg-gray-50 transition-colors">
+                          <RotateCcw className="w-3.5 h-3.5" /> Reschedule
+                        </button>
+                      )}
                       <button onClick={() => handleCancel(session)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 text-red-500 text-xs font-medium hover:bg-red-50 transition-colors">
                         <XCircle className="w-3.5 h-3.5" /> Cancel
                       </button>
                     </>
                   )}
                   {session.status === "completed" && !hasRated && (
-                    <button onClick={() => { setSelectedSession(session); setShowRateDialog(true); }}
+                    <button onClick={() => {
+                      setRateRole(isTeacher ? "teacher" : "learner");
+                      setRateSession(session);
+                    }}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-medium hover:bg-amber-400 transition-colors">
                       <Star className="w-3.5 h-3.5" /> Rate & Review
+                    </button>
+                  )}
+                  {session.status === "completed" && (
+                    <button onClick={() => handleRebook(session)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 text-sky-600 text-xs font-medium hover:bg-sky-50 transition-colors">
+                      <RotateCcw className="w-3.5 h-3.5" /> Rebook
                     </button>
                   )}
                 </div>
@@ -250,33 +494,25 @@ export default function SwapsPage() {
         </div>
       )}
 
-      {/* Rate Dialog */}
-      {showRateDialog && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-lg font-semibold text-navy-800 mb-4">Rate this session</h3>
-            <div className="flex gap-2 justify-center mb-4">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <button key={s} onClick={() => setRating(s)}>
-                  <Star className={`w-8 h-8 transition-colors ${s <= rating ? "text-amber-500 fill-amber-500" : "text-gray-300"}`} />
-                </button>
-              ))}
-            </div>
-            <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Leave a comment (optional)" rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none mb-4" />
-            <div className="flex gap-2">
-              <button onClick={() => { setShowRateDialog(false); setRating(0); setFeedback(""); }}
-                className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                Cancel
-              </button>
-              <button onClick={handleRate} disabled={rating === 0}
-                className="flex-1 py-2 rounded-lg bg-navy-800 text-white text-sm font-semibold hover:bg-navy-700 transition-colors disabled:opacity-50">
-                Submit
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Two-way Rating Dialog */}
+      {rateSession && (
+        <RateDialog
+          session={rateSession}
+          role={rateRole}
+          otherName={profileCache[rateRole === "learner" ? rateSession.teacher_id : rateSession.learner_id]?.name || "them"}
+          onClose={() => setRateSession(null)}
+          onSubmit={fetchSessions}
+        />
+      )}
+
+      {/* Reschedule Dialog */}
+      {rescheduleSession && (
+        <RescheduleDialog
+          session={rescheduleSession}
+          userId={user.id}
+          onClose={() => setRescheduleSession(null)}
+          onDone={fetchSessions}
+        />
       )}
     </main>
   );

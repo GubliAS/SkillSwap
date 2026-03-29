@@ -1,6 +1,11 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { getAllProfiles } from '@/lib/data';
+import { Profile } from '@/lib/types';
 
 const HOW_IT_WORKS = [
   {
@@ -35,51 +40,6 @@ const HOW_IT_WORKS = [
   },
 ];
 
-const FEATURED_SKILLS = [
-  {
-    title: 'Introduction to Python',
-    category: 'Programming',
-    instructor: 'Kwame A.',
-    image: 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=400&h=250&fit=crop',
-    rating: 4.8,
-  },
-  {
-    title: 'UI/UX Design Basics',
-    category: 'Design',
-    instructor: 'Ama K.',
-    image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400&h=250&fit=crop',
-    rating: 4.9,
-  },
-  {
-    title: 'Web Development',
-    category: 'Programming',
-    instructor: 'Yaw M.',
-    image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=250&fit=crop',
-    rating: 4.7,
-  },
-  {
-    title: 'Digital Marketing',
-    category: 'Marketing',
-    instructor: 'Abena S.',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=250&fit=crop',
-    rating: 4.6,
-  },
-  {
-    title: 'Graphic Design',
-    category: 'Design',
-    instructor: 'Kofi B.',
-    image: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=400&h=250&fit=crop',
-    rating: 4.8,
-  },
-  {
-    title: 'Data Analysis',
-    category: 'Data Science',
-    instructor: 'Efua N.',
-    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop',
-    rating: 4.5,
-  },
-];
-
 const TESTIMONIALS = [
   {
     name: 'Priscilla Asante',
@@ -99,6 +59,19 @@ const TESTIMONIALS = [
 ];
 
 export default function Home() {
+  const [featuredProfiles, setFeaturedProfiles] = useState<Profile[]>([]);
+
+  useEffect(() => {
+    getAllProfiles().then((profiles) => {
+      // Show profiles that have skills to teach, sorted by rating
+      const withSkills = profiles
+        .filter((p) => p.skills_to_teach.length > 0)
+        .sort((a, b) => b.rating - a.rating)
+        .slice(0, 6);
+      setFeaturedProfiles(withSkills);
+    });
+  }, []);
+
   return (
     <>
       <Navbar />
@@ -183,52 +156,62 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {FEATURED_SKILLS.map((skill) => (
-                <div
-                  key={skill.title}
-                  className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow group"
-                >
-                  <div className="relative h-44 overflow-hidden">
-                    <img
-                      src={skill.image}
-                      alt={skill.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <span className="absolute top-3 left-3 px-3 py-1 bg-sky-500 text-white text-xs font-semibold rounded-full">
-                      {skill.category}
-                    </span>
-                  </div>
-                  <div className="p-5">
-                    <h3 className="font-semibold text-navy-800 mb-2">{skill.title}</h3>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-navy-800 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                          {skill.instructor[0]}
-                        </div>
-                        <span className="text-sm text-gray-500">{skill.instructor}</span>
+            {featuredProfiles.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-sm">No skills listed yet. Be the first to sign up and share your skills!</p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {featuredProfiles.map((p) => {
+                  const initials = p.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+                  const topSkill = p.skills_to_teach[0];
+                  return (
+                    <div key={p.id} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow group">
+                      <div className="relative h-44 bg-gradient-to-br from-navy-800 to-sky-600 flex items-center justify-center">
+                        {p.avatar_url ? (
+                          <img src={p.avatar_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        ) : (
+                          <span className="text-4xl font-bold text-white/30">{initials}</span>
+                        )}
+                        <span className="absolute top-3 left-3 px-3 py-1 bg-sky-500 text-white text-xs font-semibold rounded-full">
+                          {topSkill?.category || "Skills"}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
-                          <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                        </svg>
-                        <span className="text-sm text-gray-500 font-medium">{skill.rating}</span>
+                      <div className="p-5">
+                        <h3 className="font-semibold text-navy-800 mb-1">{topSkill?.name || "Various Skills"}</h3>
+                        <p className="text-xs text-gray-400 mb-3">
+                          {p.skills_to_teach.length > 1 && `+${p.skills_to_teach.length - 1} more skill${p.skills_to_teach.length > 2 ? "s" : ""}`}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 bg-navy-800 rounded-full flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                              {p.avatar_url ? <img src={p.avatar_url} alt={p.name} className="w-full h-full object-cover" /> : initials}
+                            </div>
+                            <span className="text-sm text-gray-500">{p.name}</span>
+                          </div>
+                          {p.rating > 0 && (
+                            <div className="flex items-center gap-1">
+                              <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
+                                <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                              </svg>
+                              <span className="text-sm text-gray-500 font-medium">{p.rating.toFixed(1)}</span>
+                            </div>
+                          )}
+                        </div>
+                        <Link href="/signup"
+                          className="mt-4 block w-full text-center py-2.5 rounded-lg bg-navy-800 text-white text-sm font-semibold hover:bg-navy-700 transition-colors">
+                          Request Swap
+                        </Link>
                       </div>
                     </div>
-                    <Link
-                      href="/explore"
-                      className="mt-4 block w-full text-center py-2.5 rounded-lg bg-navy-800 text-white text-sm font-semibold hover:bg-navy-700 transition-colors"
-                    >
-                      Request Swap
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="text-center mt-10">
               <Link
-                href="/explore"
+                href="/signup"
                 className="inline-flex items-center px-6 py-3 rounded-full border-2 border-navy-800 text-navy-800 font-semibold text-sm hover:bg-navy-800 hover:text-white transition-colors"
               >
                 View All Skills →
