@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { getNotifications, markNotificationsRead } from "@/lib/data";
+import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { Notification } from "@/lib/types";
 import { Bell, LogOut } from "lucide-react";
@@ -29,14 +30,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!user) return;
     getNotifications(user.id).then(setNotifications);
-    const interval = setInterval(() => getNotifications(user.id).then(setNotifications), 30000);
+
+    // Realtime subscription for new notifications
+    const channel = supabase
+      .channel(`notifications:${user.id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        setNotifications((prev) => [payload.new as Notification, ...prev]);
+      })
+      .subscribe();
+
     // Check for session reminders on load (fire-and-forget)
     fetch("/api/sessions/reminders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user.id }),
     }).catch(() => {});
-    return () => clearInterval(interval);
+
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const unread = notifications.filter((n) => !n.read).length;

@@ -91,7 +91,8 @@ export default function PublicProfilePage() {
       status: "pending", notes: "",
     });
     if (error) {
-      toast.error("Failed to book session");
+      console.error("Session booking error:", error);
+      toast.error(`Failed to book session: ${error.message}`);
     } else {
       await createNotification({
         user_id: profile.id,
