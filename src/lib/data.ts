@@ -1,0 +1,402 @@
+import { supabase } from "@/lib/supabase";
+import { Profile, Session, Message, Notification, Badge, Reaction } from "@/lib/types";
+
+// ─── Profiles ───────────────────────────────────────────────
+
+export async function getProfileById(id: string): Promise<Profile | null> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return data as Profile | null;
+}
+
+export async function getAllProfiles(): Promise<Profile[]> {
+  const { data } = await supabase.from("profiles").select("*");
+  return (data as Profile[]) || [];
+}
+
+export async function updateProfile(id: string, updates: Partial<Profile>) {
+  const { error } = await supabase
+    .from("profiles")
+    .update(updates)
+    .eq("id", id);
+  return { error };
+}
+
+export async function searchProfiles(query: string, filters?: {
+  faculty?: string;
+  mode?: string;
+  category?: string;
+  level?: string;
+}): Promise<Profile[]> {
+  let q = supabase.from("profiles").select("*");
+
+  if (filters?.faculty) q = q.eq("faculty", filters.faculty);
+  if (filters?.mode && filters.mode !== "both") q = q.or(`preferred_mode.eq.${filters.mode},preferred_mode.eq.both`);
+
+  const { data } = await q;
+  let profiles = (data as Profile[]) || [];
+
+  if (query) {
+    const lower = query.toLowerCase();
+    profiles = profiles.filter(
+      (p) =>
+        p.name.toLowerCase().includes(lower) ||
+        p.skills_to_teach.some((s) => s.name.toLowerCase().includes(lower)) ||
+        p.skills_to_learn.some((s) => s.name.toLowerCase().includes(lower))
+    );
+  }
+
+  if (filters?.category) {
+    profiles = profiles.filter((p) =>
+      p.skills_to_teach.some((s) => s.category === filters.category) ||
+      p.skills_to_learn.some((s) => s.category === filters.category)
+    );
+  }
+
+  if (filters?.level) {
+    profiles = profiles.filter((p) =>
+      p.skills_to_teach.some((s) => s.level === filters.level) ||
+      p.skills_to_learn.some((s) => s.level === filters.level)
+    );
+  }
+
+  return profiles;
+}
+
+export function getMatchScore(currentUser: Profile, peer: Profile): number {
+  let score = 0;
+  currentUser.skills_to_learn.forEach((learn) => {
+    if (peer.skills_to_teach.some((t) => t.name.toLowerCase() === learn.name.toLowerCase())) {
+      score += 10;
+    }
+  });
+  currentUser.skills_to_teach.forEach((teach) => {
+    if (peer.skills_to_learn.some((l) => l.name.toLowerCase() === teach.name.toLowerCase())) {
+      score += 10;
+    }
+  });
+  if (peer.faculty === currentUser.faculty) score += 3;
+  if (peer.preferred_mode === currentUser.preferred_mode || peer.preferred_mode === "both") score += 2;
+  score += Math.min(peer.rating * 2, 10);
+  return score;
+}
+
+export function getTimeSinceLastSeen(lastSeen: string | undefined): string {
+  if (!lastSeen) return "Unknown";
+  const diff = Date.now() - new Date(lastSeen).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 5) return "Online now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+// ─── Sessions ───────────────────────────────────────────────
+
+export async function getSessionsByUser(userId: string): Promise<Session[]> {
+  const { data } = await supabase
+    .from("sessions")
+    .select("*")
+    .or(`teacher_id.eq.${userId},learner_id.eq.${userId}`)
+    .order("created_at", { ascending: false });
+  return (data as Session[]) || [];
+}
+
+export async function createSession(session: Omit<Session, "id" | "created_at">) {
+  const { data, error } = await supabase
+    .from("sessions")
+    .insert(session)
+    .select()
+    .single();
+  return { data: data as Session | null, error };
+}
+
+export async function updateSession(id: string, updates: Partial<Session>) {
+  const { error } = await supabase
+    .from("sessions")
+    .update(updates)
+    .eq("id", id);
+  return { error };
+}
+
+// ─── Messages ───────────────────────────────────────────────
+
+export async function getConversations(userId: string) {
+  const [{ data: sent }, { data: received }] = await Promise.all([
+    supabase
+      .from("messages")
+      .select("*")
+      .eq("sender_id", userId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("messages")
+      .select("*")
+      .eq("receiver_id", userId)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const all = [...(sent || []), ...(received || [])] as Message[];
+  const convMap = new Map<string, Message[]>();
+
+  all.forEach((msg) => {
+    const peerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
+    if (!convMap.has(peerId)) convMap.set(peerId, []);
+    convMap.get(peerId)!.push(msg);
+  });
+
+  const conversations = Array.from(convMap.entries()).map(([peerId, msgs]) => {
+    msgs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const unread = msgs.filter((m) => m.receiver_id === userId && !m.read).length;
+    return { peerId, lastMessage: msgs[0], messages: msgs, unreadCount: unread };
+  });
+
+  conversations.sort(
+    (a, b) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime()
+  );
+
+  return conversations;
+}
+
+export async function getMessagesBetween(userId: string, peerId: string): Promise<Message[]> {
+  const { data } = await supabase
+    .from("messages")
+    .select("*")
+    .or(
+      `and(sender_id.eq.${userId},receiver_id.eq.${peerId}),and(sender_id.eq.${peerId},receiver_id.eq.${userId})`
+    )
+    .order("created_at", { ascending: true });
+  return (data as Message[]) || [];
+}
+
+export async function sendMessage(msg: {
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  type?: string;
+  reply_to?: string;
+  reply_preview?: string;
+  reply_sender_id?: string;
+}) {
+  const row: Record<string, unknown> = {
+    sender_id: msg.sender_id,
+    receiver_id: msg.receiver_id,
+    content: msg.content,
+    type: msg.type || "text",
+  };
+  if (msg.reply_to) {
+    row.reply_to = msg.reply_to;
+    row.reply_preview = msg.reply_preview;
+    row.reply_sender_id = msg.reply_sender_id;
+  }
+  const { data, error } = await supabase
+    .from("messages")
+    .insert(row)
+    .select()
+    .single();
+
+  if (data && !error) {
+    fetch("/api/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipientId: msg.receiver_id,
+        title: "New Message",
+        body:
+          msg.type === "audio"
+            ? "🎤 Voice note"
+            : msg.type === "image"
+            ? "📷 Photo"
+            : msg.type === "document"
+            ? "📄 Document"
+            : msg.content.length > 80
+            ? msg.content.slice(0, 80) + "..."
+            : msg.content,
+        url: "/dashboard/messages",
+      }),
+    }).catch(() => {});
+  }
+
+  return { data: data as Message | null, error };
+}
+
+export async function markMessagesAsRead(userId: string, senderId: string) {
+  await supabase
+    .from("messages")
+    .update({ read: true, delivered: true })
+    .eq("receiver_id", userId)
+    .eq("sender_id", senderId)
+    .eq("read", false);
+}
+
+export async function markMessagesAsDelivered(userId: string) {
+  await supabase
+    .from("messages")
+    .update({ delivered: true })
+    .eq("receiver_id", userId)
+    .eq("delivered", false);
+}
+
+export async function deleteMessage(messageId: string) {
+  const { error } = await supabase
+    .from("messages")
+    .update({ deleted_at: new Date().toISOString(), content: "" })
+    .eq("id", messageId);
+  return { error };
+}
+
+export async function togglePinMessage(messageId: string, pinned: boolean) {
+  const { error } = await supabase
+    .from("messages")
+    .update({ pinned })
+    .eq("id", messageId);
+  return { error };
+}
+
+export async function editMessage(messageId: string, newContent: string) {
+  const { error } = await supabase
+    .from("messages")
+    .update({ content: newContent, edited_at: new Date().toISOString() })
+    .eq("id", messageId);
+  return { error };
+}
+
+export async function forwardMessage(originalMsg: Message, senderId: string, receiverId: string) {
+  const row: Record<string, unknown> = {
+    sender_id: senderId,
+    receiver_id: receiverId,
+    content: originalMsg.content,
+    type: originalMsg.type,
+    forwarded_from: originalMsg.id,
+  };
+  const { data, error } = await supabase.from("messages").insert(row).select().single();
+  if (data && !error) {
+    fetch("/api/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipientId: receiverId,
+        title: "New Message",
+        body: "Forwarded message",
+        url: "/dashboard/messages",
+      }),
+    }).catch(() => {});
+  }
+  return { data: data as Message | null, error };
+}
+
+export async function addReaction(messageId: string, userId: string, emoji: string) {
+  const { data, error } = await supabase
+    .from("message_reactions")
+    .upsert({ message_id: messageId, user_id: userId, emoji }, { onConflict: "message_id,user_id,emoji" })
+    .select()
+    .single();
+  return { data: data as Reaction | null, error };
+}
+
+export async function removeReaction(messageId: string, userId: string, emoji: string) {
+  const { error } = await supabase
+    .from("message_reactions")
+    .delete()
+    .eq("message_id", messageId)
+    .eq("user_id", userId)
+    .eq("emoji", emoji);
+  return { error };
+}
+
+export async function getReactionsForMessages(messageIds: string[]): Promise<Reaction[]> {
+  if (messageIds.length === 0) return [];
+  const { data } = await supabase
+    .from("message_reactions")
+    .select("*")
+    .in("message_id", messageIds);
+  return (data as Reaction[]) || [];
+}
+
+export async function searchMessages(userId: string, peerId: string, query: string): Promise<Message[]> {
+  const { data } = await supabase
+    .from("messages")
+    .select("*")
+    .or(`and(sender_id.eq.${userId},receiver_id.eq.${peerId}),and(sender_id.eq.${peerId},receiver_id.eq.${userId})`)
+    .ilike("content", `%${query}%`)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  return (data as Message[]) || [];
+}
+
+export async function updateLastSeen(userId: string) {
+  await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", userId);
+}
+
+// ─── Notifications ──────────────────────────────────────────
+
+export async function getNotifications(userId: string): Promise<Notification[]> {
+  const { data } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  return (data as Notification[]) || [];
+}
+
+export async function createNotification(notif: Omit<Notification, "id" | "created_at" | "read">) {
+  await supabase.from("notifications").insert(notif);
+}
+
+export async function markNotificationsRead(userId: string) {
+  await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("user_id", userId)
+    .eq("read", false);
+}
+
+// ─── Badges ─────────────────────────────────────────────────
+
+export function computeBadges(sessions: Session[], userId: string, profile?: Profile): Badge[] {
+  const badges: Badge[] = [];
+  const completed = sessions.filter((s) => s.status === "completed");
+  const taught = completed.filter((s) => s.teacher_id === userId);
+  const learned = completed.filter((s) => s.learner_id === userId);
+
+  // Core session badges
+  if (completed.length >= 1) badges.push({ id: "first", name: "First Session", description: "Completed your first session", icon: "🎯" });
+  if (completed.length >= 5) badges.push({ id: "five", name: "High Five", description: "Completed 5 sessions", icon: "🖐️" });
+  if (completed.length >= 10) badges.push({ id: "ten", name: "Dedicated", description: "Completed 10 sessions", icon: "🏆" });
+  if (taught.length >= 3) badges.push({ id: "teacher", name: "Great Teacher", description: "Taught 3+ sessions", icon: "📚" });
+  if (learned.length >= 3) badges.push({ id: "learner", name: "Quick Learner", description: "Learned 3+ sessions", icon: "🧠" });
+
+  // Super Helper — taught 20+ unique students
+  const uniqueStudents = new Set(taught.map((s) => s.learner_id));
+  if (uniqueStudents.size >= 20) badges.push({ id: "super_helper", name: "Super Helper", description: "Helped 20+ students", icon: "🦸" });
+
+  // Versatile Tutor — taught 5+ different subjects
+  const uniqueSubjects = new Set(taught.map((s) => s.skill.toLowerCase()));
+  if (uniqueSubjects.size >= 5) badges.push({ id: "versatile", name: "Versatile Tutor", description: "Taught 5+ different subjects", icon: "🎨" });
+
+  // Perfect Score — 5.0 rating with 10+ reviews
+  if (profile && profile.rating >= 5.0 && profile.total_ratings >= 10) {
+    badges.push({ id: "perfect", name: "Perfect Score", description: "5.0 rating with 10+ reviews", icon: "⭐" });
+  }
+
+  // Rising Star — 5+ sessions in first month
+  if (completed.length >= 5) {
+    const firstSession = completed[completed.length - 1];
+    const lastSession = completed[0];
+    const daysBetween = (new Date(lastSession.created_at).getTime() - new Date(firstSession.created_at).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysBetween <= 30) badges.push({ id: "rising_star", name: "Rising Star", description: "5+ sessions in your first month", icon: "🌟" });
+  }
+
+  // Community Builder — both taught and learned 5+ times
+  if (taught.length >= 5 && learned.length >= 5) {
+    badges.push({ id: "community", name: "Community Builder", description: "Active on both sides of the exchange", icon: "🤝" });
+  }
+
+  return badges;
+}
