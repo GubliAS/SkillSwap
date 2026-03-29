@@ -121,9 +121,12 @@ export function getMatchScore(currentUser: Profile, peer: Profile): number {
     if (myLearnCodes.has(c.code.toLowerCase())) score += 30;
   });
 
-  if (peer.faculty === currentUser.faculty) score += 3;
-  if (peer.preferred_mode === currentUser.preferred_mode || peer.preferred_mode === "both") score += 2;
-  score += Math.min(peer.rating * 2, 10);
+  // Only add bonus points if there's at least one skill/course overlap
+  if (score > 0) {
+    if (peer.faculty === currentUser.faculty) score += 3;
+    if (peer.preferred_mode === currentUser.preferred_mode || peer.preferred_mode === "both") score += 2;
+    score += Math.min(peer.rating * 2, 10);
+  }
   return score;
 }
 
@@ -243,22 +246,28 @@ export async function sendMessage(msg: {
     .single();
 
   if (data && !error) {
+    const preview = msg.type === "audio" ? "🎤 Voice note"
+      : msg.type === "image" ? "📷 Photo"
+      : msg.type === "document" ? "📄 Document"
+      : msg.content.length > 80 ? msg.content.slice(0, 80) + "..." : msg.content;
+
+    // In-app notification
+    createNotification({
+      user_id: msg.receiver_id,
+      type: "new_message",
+      title: "New Message",
+      message: preview,
+      link: `/dashboard/messages?peer=${msg.sender_id}`,
+    }).catch(() => {});
+
+    // Push notification
     fetch("/api/push/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         recipientId: msg.receiver_id,
         title: "New Message",
-        body:
-          msg.type === "audio"
-            ? "🎤 Voice note"
-            : msg.type === "image"
-            ? "📷 Photo"
-            : msg.type === "document"
-            ? "📄 Document"
-            : msg.content.length > 80
-            ? msg.content.slice(0, 80) + "..."
-            : msg.content,
+        body: preview,
         url: "/dashboard/messages",
       }),
     }).catch(() => {});
@@ -587,6 +596,11 @@ export async function createStudyGroup(
     console.error("Failed to add creator as coordinator:", memberError);
   }
   return { data: data as StudyGroup, error: null };
+}
+
+export async function deleteStudyGroup(groupId: string) {
+  const { error } = await supabase.from("study_groups").delete().eq("id", groupId);
+  return { error };
 }
 
 export async function requestJoinGroup(groupId: string, userId: string) {

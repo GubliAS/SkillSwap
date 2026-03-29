@@ -114,6 +114,13 @@ export default function ProfilePage() {
     setAvatarUploading(false);
   };
 
+  const handleAvatarRemove = async () => {
+    if (!user || !user.avatar_url) return;
+    await updateProfile(user.id, { avatar_url: "" });
+    await refreshProfile();
+    toast.success("Avatar removed!");
+  };
+
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
@@ -161,11 +168,15 @@ export default function ProfilePage() {
         <div className="flex items-center gap-4 mb-6">
           <div className="relative">
             <div className="w-16 h-16 bg-navy-800 rounded-full flex items-center justify-center text-white text-xl font-bold overflow-hidden">
-              {user.avatar_url ? (
+              {avatarUploading ? (
+                <div className="w-full h-full flex items-center justify-center bg-navy-800/80">
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                </div>
+              ) : user.avatar_url ? (
                 <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
               ) : initials}
             </div>
-            <label className="absolute -bottom-1 -right-1 w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-sky-400 transition-colors">
+            <label className={`absolute -bottom-1 -right-1 w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center transition-colors ${avatarUploading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-sky-400"}`}>
               <Camera className="w-3 h-3 text-white" />
               <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={avatarUploading} />
             </label>
@@ -175,6 +186,11 @@ export default function ProfilePage() {
             <p className="text-sm text-gray-500">{user.email}</p>
             {user.rating > 0 && (
               <p className="text-xs text-gray-400 mt-0.5">⭐ {user.rating.toFixed(1)} · {user.total_ratings} reviews · {user.xp} XP</p>
+            )}
+            {user.avatar_url && (
+              <button onClick={handleAvatarRemove} className="text-xs text-red-400 hover:text-red-600 mt-1 transition-colors">
+                Remove avatar
+              </button>
             )}
           </div>
         </div>

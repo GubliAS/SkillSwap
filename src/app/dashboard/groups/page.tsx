@@ -7,6 +7,7 @@ import {
   getStudyGroups,
   getUserGroups,
   createStudyGroup,
+  deleteStudyGroup,
   requestJoinGroup,
   approveGroupMember,
   removeGroupMember,
@@ -194,6 +195,7 @@ function GroupDetail({
   const [joining, setJoining] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const isCreator = group.creator_id === currentUserId;
   const isCoordinator = membership?.role === "coordinator" && membership?.status === "approved";
   const isApprovedMember = membership?.status === "approved";
 
@@ -287,6 +289,15 @@ function GroupDetail({
     if (error) { toast.error("Failed to send"); setNewMsg(content); }
   };
 
+  const handleDelete = async () => {
+    if (!confirm("Delete this group? This cannot be undone.")) return;
+    const { error } = await deleteStudyGroup(group.id);
+    if (error) { toast.error("Failed to delete group"); return; }
+    toast.success("Group deleted");
+    onGroupUpdated();
+    onBack();
+  };
+
   const approvedMembers = members.filter((m) => m.status === "approved");
   const pendingMembers = members.filter((m) => m.status === "pending");
 
@@ -316,6 +327,12 @@ function GroupDetail({
           <button onClick={() => { const m = members.find((x) => x.user_id === currentUserId); if (m) handleRemove(m.id, m.user_id); }}
             className="shrink-0 px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:bg-gray-50">
             Leave
+          </button>
+        )}
+        {isCreator && (
+          <button onClick={handleDelete}
+            className="shrink-0 px-3 py-1.5 rounded-lg border border-red-200 text-xs text-red-500 hover:bg-red-50 transition-colors">
+            Delete
           </button>
         )}
       </div>
