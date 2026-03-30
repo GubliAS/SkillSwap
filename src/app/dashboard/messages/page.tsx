@@ -12,7 +12,7 @@ import {
 import { Profile, Message, Reaction, ReportReason } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { Send, Search, Trash2, Edit2, Pin, Forward, Smile, Reply, X, Check, CheckCheck, MoreVertical, Flag, Ban } from "lucide-react";
+import { Send, Search, Trash2, Edit2, Pin, PinOff, Forward, Smile, Reply, X, Check, CheckCheck, MoreVertical, Flag, Ban } from "lucide-react";
 
 const EMOJI_LIST = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
@@ -35,6 +35,7 @@ function MessagesInner() {
   const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<string | null>(null);
   const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
   const [showChatMenu, setShowChatMenu] = useState(false);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportReason, setReportReason] = useState<ReportReason>("harassment");
   const [reportDetails, setReportDetails] = useState("");
@@ -251,6 +252,32 @@ function MessagesInner() {
             </div>
           )}
 
+          {/* Pinned message bar */}
+          {(() => {
+            const pinnedMsg = messages.find((m) => m.pinned && !m.deleted_at);
+            if (!pinnedMsg) return null;
+            return (
+              <button
+                onClick={() => {
+                  const el = messageRefs.current[pinnedMsg.id];
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "center" });
+                    el.classList.add("bg-amber-50");
+                    setTimeout(() => el.classList.remove("bg-amber-50"), 2000);
+                  }
+                }}
+                className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left w-full"
+              >
+                <div className="w-1 h-8 bg-sky-500 rounded-full shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-semibold text-sky-600">Pinned Message</p>
+                  <p className="text-xs text-gray-600 truncate">{pinnedMsg.content}</p>
+                </div>
+                <Pin className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+              </button>
+            );
+          })()}
+
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {(searchResults.length > 0 ? searchResults : messages).map((msg) => {
@@ -268,7 +295,7 @@ function MessagesInner() {
               }
 
               return (
-                <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"} group`}>
+                <div key={msg.id} ref={(el) => { messageRefs.current[msg.id] = el; }} className={`flex ${isMine ? "justify-end" : "justify-start"} group`}>
                   <div className={`max-w-[70%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
                     {msg.forwarded_from && (
                       <p className="text-xs text-gray-400 mb-0.5 flex items-center gap-1"><Forward className="w-3 h-3" /> Forwarded</p>
@@ -280,8 +307,7 @@ function MessagesInner() {
                     )}
                     <div className={`relative px-4 py-2.5 rounded-2xl text-sm ${
                       isMine ? "bg-navy-800 text-white rounded-br-sm" : "bg-white border border-gray-200 text-gray-800 rounded-bl-sm"
-                    } ${msg.pinned ? "ring-2 ring-amber-400" : ""}`}>
-                      {msg.pinned && <span className="absolute -top-2 -right-2 text-xs">📌</span>}
+                    }`}>
                       <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                       {msg.edited_at && <span className="text-xs opacity-60 ml-1">(edited)</span>}
                       <div className="flex items-center gap-1 mt-0.5 justify-end">
@@ -317,8 +343,15 @@ function MessagesInner() {
                       <button onClick={() => setForwardMsg(msg)} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Forward">
                         <Forward className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => togglePinMessage(msg.id, !msg.pinned).then(loadMessages)} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Pin">
-                        <Pin className="w-3.5 h-3.5" />
+                      <button onClick={async () => {
+                        if (!msg.pinned) {
+                          const currentlyPinned = messages.find((m) => m.pinned && m.id !== msg.id);
+                          if (currentlyPinned) await togglePinMessage(currentlyPinned.id, false);
+                        }
+                        await togglePinMessage(msg.id, !msg.pinned);
+                        loadMessages();
+                      }} className={`p-1 rounded hover:bg-gray-100 ${msg.pinned ? "text-amber-500 hover:text-amber-600" : "text-gray-400 hover:text-gray-600"}`} title={msg.pinned ? "Unpin" : "Pin"}>
+                        {msg.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
                       </button>
                       {isMine && (
                         <>

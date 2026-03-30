@@ -251,25 +251,30 @@ export async function sendMessage(msg: {
       : msg.type === "document" ? "📄 Document"
       : msg.content.length > 80 ? msg.content.slice(0, 80) + "..." : msg.content;
 
-    // In-app notification
-    createNotification({
-      user_id: msg.receiver_id,
-      type: "new_message",
-      title: "New Message",
-      message: preview,
-      link: `/dashboard/messages?peer=${msg.sender_id}`,
-    }).catch(() => {});
+    // Fetch sender name for notification
+    getProfileById(msg.sender_id).then((senderProfile) => {
+      const senderName = senderProfile?.name || "Someone";
 
-    // Push notification
-    fetch("/api/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        recipientId: msg.receiver_id,
-        title: "New Message",
-        body: preview,
-        url: "/dashboard/messages",
-      }),
+      // In-app notification
+      createNotification({
+        user_id: msg.receiver_id,
+        type: "new_message",
+        title: `Message from ${senderName}`,
+        message: preview,
+        link: `/dashboard/messages?peer=${msg.sender_id}`,
+      }).catch(() => {});
+
+      // Push notification
+      fetch("/api/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientId: msg.receiver_id,
+          title: `Message from ${senderName}`,
+          body: preview,
+          url: "/dashboard/messages",
+        }),
+      }).catch(() => {});
     }).catch(() => {});
   }
 
