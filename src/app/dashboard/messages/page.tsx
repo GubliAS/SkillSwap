@@ -37,6 +37,8 @@ function MessagesInner() {
   const [showChatMenu, setShowChatMenu] = useState(false);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [deleteConfirmMsg, setDeleteConfirmMsg] = useState<Message | null>(null);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [reportReason, setReportReason] = useState<ReportReason>("harassment");
   const [reportDetails, setReportDetails] = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
@@ -148,12 +150,19 @@ function MessagesInner() {
 
   const handleBlock = async () => {
     if (!user || !activePeerId) return;
-    if (!confirm("Block this user? They won't appear in your explore results or matches.")) return;
     const { error } = await blockUser(user.id, activePeerId);
     if (error) { toast.error("Failed to block user"); return; }
     toast.success("User blocked");
+    setShowBlockConfirm(false);
     setActivePeerId(null);
     loadConversations();
+  };
+
+  const handleDeleteMsg = async () => {
+    if (!deleteConfirmMsg) return;
+    await deleteMessage(deleteConfirmMsg.id);
+    setDeleteConfirmMsg(null);
+    loadMessages();
   };
 
   if (isLoading || !user) return null;
@@ -230,7 +239,7 @@ function MessagesInner() {
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     <Flag className="w-4 h-4 text-amber-500" /> Report User
                   </button>
-                  <button onClick={() => { setShowChatMenu(false); handleBlock(); }}
+                  <button onClick={() => { setShowChatMenu(false); setShowBlockConfirm(true); }}
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                     <Ban className="w-4 h-4" /> Block User
                   </button>
@@ -358,7 +367,7 @@ function MessagesInner() {
                           <button onClick={() => { setEditingMsg(msg); setEditContent(msg.content); setInput(msg.content); }} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Edit">
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={() => deleteMessage(msg.id).then(loadMessages)} className="p-1 rounded hover:bg-gray-100 text-red-400 hover:text-red-600" title="Delete">
+                          <button onClick={() => setDeleteConfirmMsg(msg)} className="p-1 rounded hover:bg-gray-100 text-red-400 hover:text-red-600" title="Delete">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </>
@@ -466,6 +475,37 @@ function MessagesInner() {
                 className="flex-1 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-500 disabled:opacity-50">
                 {reportSubmitting ? "Submitting..." : "Submit Report"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete confirmation modal */}
+      {deleteConfirmMsg && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
+            <h3 className="font-semibold text-navy-800 mb-2">Delete Message</h3>
+            <p className="text-sm text-gray-500 mb-5">This message will be deleted for everyone. This can&apos;t be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirmMsg(null)}
+                className="flex-1 py-2.5 rounded-full border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={handleDeleteMsg}
+                className="flex-1 py-2.5 rounded-full bg-red-600 text-white text-sm font-semibold hover:bg-red-500 transition-colors">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block confirmation modal */}
+      {showBlockConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
+            <h3 className="font-semibold text-navy-800 mb-2">Block User</h3>
+            <p className="text-sm text-gray-500 mb-5">They won&apos;t appear in your explore results or matches. You can unblock later.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowBlockConfirm(false)}
+                className="flex-1 py-2.5 rounded-full border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={handleBlock}
+                className="flex-1 py-2.5 rounded-full bg-red-600 text-white text-sm font-semibold hover:bg-red-500 transition-colors">Block</button>
             </div>
           </div>
         </div>

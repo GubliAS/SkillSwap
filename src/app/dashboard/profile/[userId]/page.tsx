@@ -185,9 +185,23 @@ export default function PublicProfilePage() {
   ].filter((v, i, a) => a.indexOf(v) === i);
 
   return (
-    <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5">
+    <main>
+      {/* ─── Hero Banner ─── */}
+      <section className="relative bg-navy-800 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700" />
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-sky-400/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
+        </div>
+        <div className="relative max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white">{profile.name}</h1>
+          <p className="mt-2 text-white/60">{profile.faculty}{profile.student_level ? ` · Level ${profile.student_level}` : ""}</p>
+        </div>
+      </section>
+
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5">
       {/* Header card */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <div className="flex items-start gap-4">
           <div className="relative shrink-0">
             <div className="w-16 h-16 bg-navy-800 rounded-full flex items-center justify-center text-white text-xl font-bold overflow-hidden">
@@ -272,7 +286,7 @@ export default function PublicProfilePage() {
 
       {/* Skills */}
       <div className="grid sm:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-2xl border border-gray-200 p-5">
           <h3 className="text-sm font-semibold text-navy-800 mb-3">Skills I Can Teach</h3>
           <div className="flex flex-wrap gap-2">
             {profile.skills_to_teach.length === 0 ? <p className="text-xs text-gray-400">None listed</p> :
@@ -281,7 +295,7 @@ export default function PublicProfilePage() {
               ))}
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-2xl border border-gray-200 p-5">
           <h3 className="text-sm font-semibold text-navy-800 mb-3">Skills I Want to Learn</h3>
           {profile.skills_to_learn.length === 0 ? <p className="text-xs text-gray-400">None listed</p> : (
             <div className="space-y-2">
@@ -302,7 +316,7 @@ export default function PublicProfilePage() {
       {((profile.courses_to_teach || []).length > 0 || (profile.courses_to_learn || []).length > 0) && (
         <div className="grid sm:grid-cols-2 gap-4">
           {(profile.courses_to_teach || []).length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <h3 className="text-sm font-semibold text-navy-800 mb-3">Courses I Can Help With</h3>
               <div className="flex flex-wrap gap-2">
                 {profile.courses_to_teach.map((c, i) => (
@@ -314,7 +328,7 @@ export default function PublicProfilePage() {
             </div>
           )}
           {(profile.courses_to_learn || []).length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <h3 className="text-sm font-semibold text-navy-800 mb-3">Courses I Need Help With</h3>
               <div className="flex flex-wrap gap-2">
                 {profile.courses_to_learn.map((c, i) => (
@@ -330,7 +344,7 @@ export default function PublicProfilePage() {
 
       {/* Badges */}
       {badges.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-2xl border border-gray-200 p-5">
           <h3 className="text-sm font-semibold text-navy-800 mb-3">Badges</h3>
           <div className="flex flex-wrap gap-2">
             {badges.map((b) => (
@@ -348,7 +362,7 @@ export default function PublicProfilePage() {
 
       {/* Ratings — only shown after 3+ completed sessions per spec */}
       {profile.total_ratings >= 3 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-2xl border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-navy-800">Rating</h3>
             <div className="flex items-center gap-2">
@@ -437,7 +451,7 @@ export default function PublicProfilePage() {
         </div>
       )}
       {profile.total_ratings > 0 && profile.total_ratings < 3 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-2xl border border-gray-200 p-5">
           <p className="text-xs text-gray-400 text-center">Rating visible after 3+ completed sessions ({profile.total_ratings}/3 so far)</p>
         </div>
       )}
@@ -526,6 +540,7 @@ export default function PublicProfilePage() {
           </div>
         </div>
       )}
+      </div>
     </main>
   );
 }

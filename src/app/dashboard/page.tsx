@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { getSessionsByUser, getAllProfiles, getMatchScore, computeBadges, getNotifications, computeSessionStats } from "@/lib/data";
 import { Session, Profile, Notification, SessionStats } from "@/lib/types";
+import { Calendar, BookOpen, Award, Zap, Clock, GraduationCap, TrendingUp, Search, Users, UserCog } from "lucide-react";
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -57,109 +58,165 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl font-bold text-navy-800 mb-6">
-        Welcome back, {user.name.split(" ")[0]}!
-      </h1>
+    <main>
+      {/* ─── Hero Banner ─── */}
+      <section className="relative bg-navy-800 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700" />
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-sky-400/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
+        </div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white">
+            Welcome back, {user.name.split(" ")[0]}!
+          </h1>
+          <p className="mt-2 text-white/60 max-w-lg">
+            Here&apos;s an overview of your skill exchange activity.
+          </p>
+        </div>
+      </section>
 
-      {/* Stats */}
-      <div className="grid sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500 mb-1">Active Sessions</p>
-          <p className="text-3xl font-bold text-sky-500">{loaded ? activeSessions.length : "—"}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500 mb-1">Skills Listed</p>
-          <p className="text-3xl font-bold text-emerald-600">{skillsCount}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500 mb-1">Completed Sessions</p>
-          <p className="text-3xl font-bold text-violet-600">{loaded ? completedSessions.length : "—"}</p>
-        </div>
-      </div>
-
-      {/* Session stats row */}
-      {loaded && stats && stats.total_completed > 0 && (
-        <div className="grid sm:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-400 mb-1">Hours Spent</p>
-            <p className="text-2xl font-bold text-navy-800">{stats.total_hours}<span className="text-sm font-normal text-gray-400">h</span></p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-400 mb-1">Sessions Taught</p>
-            <p className="text-2xl font-bold text-sky-600">{stats.sessions_as_teacher}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-400 mb-1">Sessions Learned</p>
-            <p className="text-2xl font-bold text-violet-600">{stats.sessions_as_learner}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-400 mb-1">{stats.learning_streak > 0 ? "🔥 Learning Streak" : "Most Taught"}</p>
-            <p className="text-2xl font-bold text-emerald-600">
-              {stats.learning_streak > 0 ? `${stats.learning_streak}d` : stats.most_taught_skill || "—"}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="grid lg:grid-cols-3 gap-6 mb-6">
-        {/* Recent Activity */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-navy-800 mb-4">Recent Activity</h2>
-          {recentNotifs.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-6">
-              No activity yet — book your first session to get started!
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {recentNotifs.map((n) => (
-                <div key={n.id} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
-                  <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${n.read ? "bg-gray-300" : "bg-sky-500"}`} />
-                  <div>
-                    <p className="text-sm text-gray-700">{n.message}</p>
-                    <p className="text-xs text-gray-400 mt-1">{timeAgo(n.created_at)}</p>
-                  </div>
-                </div>
-              ))}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* ─── Stats ─── */}
+        <div className="grid sm:grid-cols-3 gap-5">
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+            <div className="w-10 h-10 bg-sky-100 rounded-xl flex items-center justify-center mb-3">
+              <Calendar className="w-5 h-5 text-sky-600" />
             </div>
-          )}
-        </div>
-
-        {/* Badges */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-navy-800 mb-4">Your Badges</h2>
-          {badges.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">Complete sessions to earn badges!</p>
-          ) : (
-            <div className="space-y-2">
-              {badges.map((b) => (
-                <div key={b.id} className="flex items-center gap-3 p-2 rounded-lg bg-sky-50">
-                  <span className="text-xl">{b.icon}</span>
-                  <div>
-                    <p className="text-xs font-semibold text-navy-800">{b.name}</p>
-                    <p className="text-xs text-gray-500">{b.description}</p>
-                  </div>
-                </div>
-              ))}
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Active Sessions</p>
+            <p className="text-3xl font-bold text-sky-500">{loaded ? activeSessions.length : "—"}</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center mb-3">
+              <BookOpen className="w-5 h-5 text-emerald-600" />
             </div>
-          )}
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Skills Listed</p>
+            <p className="text-3xl font-bold text-emerald-600">{skillsCount}</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+            <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center mb-3">
+              <Award className="w-5 h-5 text-violet-600" />
+            </div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Completed Sessions</p>
+            <p className="text-3xl font-bold text-violet-600">{loaded ? completedSessions.length : "—"}</p>
+          </div>
         </div>
-      </div>
 
-      {/* Quick actions */}
-      <div className="grid sm:grid-cols-3 gap-4">
-        <Link href="/dashboard/explore" className="bg-navy-800 text-white rounded-xl p-6 hover:bg-navy-700 transition-colors">
-          <h3 className="font-semibold mb-1">Find New Skills</h3>
-          <p className="text-sm text-white/60">Browse peers and send session requests.</p>
-        </Link>
-        <Link href="/dashboard/matches" className="bg-sky-500 text-white rounded-xl p-6 hover:bg-sky-400 transition-colors">
-          <h3 className="font-semibold mb-1">Your Matches</h3>
-          <p className="text-sm text-white/60">{topMatchCount} peers match your skills.</p>
-        </Link>
-        <Link href="/dashboard/profile" className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-          <h3 className="font-semibold text-navy-800 mb-1">Update Profile</h3>
-          <p className="text-sm text-gray-500">Add new skills or update availability.</p>
-        </Link>
+        {/* ─── Session Stats Row ─── */}
+        {loaded && stats && stats.total_completed > 0 && (
+          <div className="grid sm:grid-cols-4 gap-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4 text-gray-400" />
+                <p className="text-xs text-gray-400">Hours Spent</p>
+              </div>
+              <p className="text-2xl font-bold text-navy-800">{stats.total_hours}<span className="text-sm font-normal text-gray-400">h</span></p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-4 h-4 text-gray-400" />
+                <p className="text-xs text-gray-400">Sessions Taught</p>
+              </div>
+              <p className="text-2xl font-bold text-sky-600">{stats.sessions_as_teacher}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-2 mb-2">
+                <BookOpen className="w-4 h-4 text-gray-400" />
+                <p className="text-xs text-gray-400">Sessions Learned</p>
+              </div>
+              <p className="text-2xl font-bold text-violet-600">{stats.sessions_as_learner}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-gray-400" />
+                <p className="text-xs text-gray-400">{stats.learning_streak > 0 ? "Learning Streak" : "Most Taught"}</p>
+              </div>
+              <p className="text-2xl font-bold text-emerald-600">
+                {stats.learning_streak > 0 ? `${stats.learning_streak}d` : stats.most_taught_skill || "—"}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Activity & Badges ─── */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Recent Activity */}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+            <h2 className="text-lg font-semibold text-navy-800 mb-4">Recent Activity</h2>
+            {recentNotifs.length === 0 ? (
+              <div className="text-center py-10">
+                <div className="w-14 h-14 bg-sky-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-6 h-6 text-sky-600" />
+                </div>
+                <p className="text-sm font-medium text-navy-800 mb-1">No activity yet</p>
+                <p className="text-xs text-gray-400">Book your first session to get started!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentNotifs.map((n) => (
+                  <div key={n.id} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
+                    <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${n.read ? "bg-gray-300" : "bg-sky-500"}`} />
+                    <div>
+                      <p className="text-sm text-gray-700">{n.message}</p>
+                      <p className="text-xs text-gray-400 mt-1">{timeAgo(n.created_at)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Badges */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+            <h2 className="text-lg font-semibold text-navy-800 mb-4">Your Badges</h2>
+            {badges.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-14 h-14 bg-amber-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Award className="w-6 h-6 text-amber-600" />
+                </div>
+                <p className="text-sm font-medium text-navy-800 mb-1">No badges yet</p>
+                <p className="text-xs text-gray-400">Complete sessions to earn badges!</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {badges.map((b) => (
+                  <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl bg-sky-50 hover:bg-sky-100 transition-colors">
+                    <span className="text-xl">{b.icon}</span>
+                    <div>
+                      <p className="text-xs font-semibold text-navy-800">{b.name}</p>
+                      <p className="text-xs text-gray-500">{b.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─── Quick Actions ─── */}
+        <div className="grid sm:grid-cols-3 gap-5">
+          <Link href="/dashboard/explore" className="bg-navy-800 text-white rounded-2xl p-6 hover:bg-navy-700 transition-all shadow-lg shadow-navy-800/25 hover:shadow-xl group">
+            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mb-3 group-hover:bg-white/20 transition-colors">
+              <Search className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="font-semibold mb-1">Find New Skills</h3>
+            <p className="text-sm text-white/60">Browse peers and send session requests.</p>
+          </Link>
+          <Link href="/dashboard/matches" className="bg-sky-500 text-white rounded-2xl p-6 hover:bg-sky-400 transition-all shadow-lg shadow-sky-500/25 hover:shadow-xl group">
+            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mb-3 group-hover:bg-white/20 transition-colors">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="font-semibold mb-1">Your Matches</h3>
+            <p className="text-sm text-white/60">{topMatchCount} peers match your skills.</p>
+          </Link>
+          <Link href="/dashboard/profile" className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-lg transition-all group">
+            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-sky-100 transition-colors">
+              <UserCog className="w-5 h-5 text-gray-500 group-hover:text-sky-600 transition-colors" />
+            </div>
+            <h3 className="font-semibold text-navy-800 mb-1">Update Profile</h3>
+            <p className="text-sm text-gray-500">Add new skills or update availability.</p>
+          </Link>
+        </div>
       </div>
     </main>
   );

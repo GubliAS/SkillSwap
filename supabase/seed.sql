@@ -47,7 +47,7 @@ VALUES
   '[{"name":"UI/UX Design","level":"beginner","category":"Design"},{"name":"Guitar","level":"beginner","category":"Music & Arts"}]',
   '[{"code":"COE 361","name":"Computer Networks","level":"advanced"},{"code":"COE 355","name":"Software Engineering","level":"intermediate"}]',
   '[{"code":"MATH 351","name":"Numerical Methods","level":"intermediate"}]',
-  '["Monday","Wednesday","Friday","Saturday"]', 'both', '+233201234567', '+233201234567', 60,
+  ARRAY['Monday','Wednesday','Friday','Saturday'], 'both', '+233201234567', '+233201234567', 60,
   '{"UI/UX Design":"Want to design better interfaces for my projects","Guitar":"Always wanted to play acoustic guitar"}',
   'public', 92, 4.8, 12, 850, now() - interval '2 minutes', now() - interval '60 days'
 ),
@@ -59,7 +59,7 @@ VALUES
   '[{"name":"Python","level":"beginner","category":"Programming"},{"name":"Data Analysis","level":"beginner","category":"Programming"}]',
   '[{"code":"BCH 251","name":"General Biochemistry","level":"intermediate"}]',
   '[{"code":"CSM 181","name":"Intro to Computing","level":"beginner"}]',
-  '["Tuesday","Thursday","Saturday"]', 'online', '+233209876543', '+233209876543', 60,
+  ARRAY['Tuesday','Thursday','Saturday'], 'online', '+233209876543', '+233209876543', 60,
   '{"Python":"Need it for bioinformatics research","Data Analysis":"Want to analyze lab results"}',
   'public', 88, 4.9, 8, 620, now() - interval '10 minutes', now() - interval '55 days'
 ),
@@ -71,7 +71,7 @@ VALUES
   '[{"name":"React Native","level":"beginner","category":"Programming"},{"name":"Web Development","level":"intermediate","category":"Programming"}]',
   '[{"code":"EE 461","name":"Power Systems","level":"advanced"},{"code":"MATH 351","name":"Numerical Methods","level":"advanced"}]',
   '[{"code":"COE 355","name":"Software Engineering","level":"beginner"}]',
-  '["Monday","Tuesday","Wednesday","Thursday","Friday"]', 'offline', '+233205551234', '+233205551234', 120,
+  ARRAY['Monday','Tuesday','Wednesday','Thursday','Friday'], 'offline', '+233205551234', '+233205551234', 120,
   '{"React Native":"Want to build a campus app","Web Development":"Need it for my final year project"}',
   'public', 95, 4.7, 15, 1100, now() - interval '30 minutes', now() - interval '50 days'
 ),
@@ -83,7 +83,7 @@ VALUES
   '[{"name":"French","level":"intermediate","category":"Languages"},{"name":"Photography","level":"beginner","category":"Music & Arts"},{"name":"Python","level":"beginner","category":"Programming"}]',
   '[{"code":"ARCH 271","name":"Design Studio","level":"intermediate"}]',
   '[{"code":"FREN 181","name":"French I","level":"beginner"}]',
-  '["Wednesday","Thursday","Saturday","Sunday"]', 'both', '+233207778899', '+233207778899', 60,
+  ARRAY['Wednesday','Thursday','Saturday','Sunday'], 'both', '+233207778899', '+233207778899', 60,
   '{"French":"Planning to study abroad in France","Photography":"Want to document my architecture projects","Python":"Parametric design automation"}',
   'public', 78, 4.6, 6, 420, now() - interval '1 hour', now() - interval '45 days'
 ),
@@ -95,7 +95,7 @@ VALUES
   '[{"name":"Machine Learning","level":"beginner","category":"Programming"},{"name":"Web Development","level":"beginner","category":"Programming"}]',
   '[{"code":"MATH 351","name":"Numerical Methods","level":"advanced"},{"code":"MATH 355","name":"Statistics II","level":"advanced"}]',
   '[{"code":"COE 361","name":"Computer Networks","level":"beginner"}]',
-  '["Monday","Wednesday","Friday"]', 'offline', '+233203334455', '+233203334455', 60,
+  ARRAY['Monday','Wednesday','Friday'], 'offline', '+233203334455', '+233203334455', 60,
   '{"Machine Learning":"Fascinated by AI and want to apply it to statistics","Web Development":"Want to build a math tutoring platform"}',
   'public', 90, 4.8, 20, 1500, now() - interval '5 minutes', now() - interval '40 days'
 ),
@@ -107,7 +107,7 @@ VALUES
   '[{"name":"Graphic Design","level":"beginner","category":"Design"},{"name":"Video Editing","level":"beginner","category":"Design"}]',
   '[{"code":"FREN 181","name":"French I","level":"advanced"},{"code":"COM 251","name":"Media Studies","level":"intermediate"}]',
   '[]',
-  '["Tuesday","Thursday","Saturday","Sunday"]', 'online', '+233206667788', '+233206667788', 30,
+  ARRAY['Tuesday','Thursday','Saturday','Sunday'], 'online', '+233206667788', '+233206667788', 30,
   '{"Graphic Design":"Want to create content for social media","Video Editing":"For my YouTube channel"}',
   'public', 85, 4.5, 10, 700, now() - interval '3 hours', now() - interval '35 days'
 ),
@@ -119,7 +119,7 @@ VALUES
   '[{"name":"Python","level":"intermediate","category":"Programming"},{"name":"Data Analysis","level":"beginner","category":"Programming"},{"name":"Digital Marketing","level":"beginner","category":"Business"}]',
   '[{"code":"ME 361","name":"Thermodynamics II","level":"advanced"},{"code":"ME 355","name":"Machine Design","level":"intermediate"}]',
   '[{"code":"CSM 181","name":"Intro to Computing","level":"intermediate"}]',
-  '["Monday","Wednesday","Saturday"]', 'both', '+233208889900', '+233208889900', 60,
+  ARRAY['Monday','Wednesday','Saturday'], 'both', '+233208889900', '+233208889900', 60,
   '{"Python":"Need it for engineering simulations","Data Analysis":"For research data processing","Digital Marketing":"To grow my business online"}',
   'public', 80, 4.4, 5, 350, now() - interval '45 minutes', now() - interval '30 days'
 ),
@@ -131,7 +131,7 @@ VALUES
   '[{"name":"French","level":"beginner","category":"Languages"},{"name":"Graphic Design","level":"beginner","category":"Design"}]',
   '[{"code":"MED 451","name":"Clinical Medicine","level":"advanced"},{"code":"ANA 351","name":"Human Anatomy","level":"advanced"}]',
   '[{"code":"FREN 181","name":"French I","level":"beginner"}]',
-  '["Tuesday","Friday","Sunday"]', 'online', '+233201112233', '+233201112233', 60,
+  ARRAY['Tuesday','Friday','Sunday'], 'online', '+233201112233', '+233201112233', 60,
   '{"French":"Want to read French medical journals","Graphic Design":"To create health infographics"}',
   'public', 75, 4.9, 18, 1300, now() - interval '15 minutes', now() - interval '25 days'
 ),
@@ -143,7 +143,7 @@ VALUES
   '[{"name":"Python","level":"beginner","category":"Programming"},{"name":"Statistics","level":"beginner","category":"Mathematics"},{"name":"AutoCAD","level":"beginner","category":"Engineering"}]',
   '[{"code":"AGE 251","name":"Soil Mechanics","level":"intermediate"}]',
   '[{"code":"MATH 355","name":"Statistics II","level":"beginner"},{"code":"CSM 181","name":"Intro to Computing","level":"beginner"}]',
-  '["Monday","Thursday","Saturday","Sunday"]', 'offline', '+233204445566', '+233204445566', 120,
+  ARRAY['Monday','Thursday','Saturday','Sunday'], 'offline', '+233204445566', '+233204445566', 120,
   '{"Python":"For precision agriculture applications","Statistics":"Need it for soil analysis research","AutoCAD":"For farm layout designs"}',
   'public', 70, 4.3, 4, 280, now() - interval '2 hours', now() - interval '20 days'
 ),
@@ -155,7 +155,7 @@ VALUES
   '[{"name":"Machine Learning","level":"intermediate","category":"Programming"},{"name":"SolidWorks","level":"beginner","category":"Engineering"},{"name":"Public Speaking","level":"beginner","category":"Communication"}]',
   '[{"code":"CSM 399","name":"Software Project","level":"advanced"},{"code":"CSM 355","name":"Database Systems","level":"advanced"},{"code":"COE 361","name":"Computer Networks","level":"intermediate"}]',
   '[{"code":"MATH 351","name":"Numerical Methods","level":"intermediate"}]',
-  '["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]', 'both', '+233207778800', '+233207778800', 60,
+  ARRAY['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], 'both', '+233207778800', '+233207778800', 60,
   '{"Machine Learning":"Want to add AI features to my apps","SolidWorks":"Curious about hardware design","Public Speaking":"Want to present at tech conferences"}',
   'public', 96, 4.7, 14, 1050, now() - interval '1 minute', now() - interval '15 days'
 )
@@ -189,7 +189,7 @@ VALUES
   -- Prince teaches Piano to Abena
   (gen_random_uuid(), 'a9999999-9999-9999-9999-999999999999', 'a6666666-6666-6666-6666-666666666666', 'Piano', (now() - interval '12 days')::date, '17:00', 120, 'offline', 'Great Hall Annex', 'completed', 4, 4, 'Abena is a quick learner with natural rhythm', 'Prince is so talented and patient with beginners', '{"teaching_clarity":4,"patience":5,"punctuality":4}', '{"engagement":5,"preparation":4,"punctuality":4}', '', now() - interval '12 days'),
   -- Nana teaches Entrepreneurship to Felicia
-  (gen_random_uuid(), 'a7777777-7777-7777-7777-777777777777', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Entrepreneurship', (now() - interval '10 days')::date, '14:00', 60, 'both', '', 'completed', 5, 4, 'Felicia already has great product ideas', 'Nana gave practical business advice, not just theory', '{"teaching_clarity":4,"patience":4,"punctuality":5}', '{"engagement":5,"preparation":5,"punctuality":5}', '', now() - interval '10 days'),
+  (gen_random_uuid(), 'a7777777-7777-7777-7777-777777777777', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Entrepreneurship', (now() - interval '10 days')::date, '14:00', 60, 'offline', 'Engineering Block Cafe', 'completed', 5, 4, 'Felicia already has great product ideas', 'Nana gave practical business advice, not just theory', '{"teaching_clarity":4,"patience":4,"punctuality":5}', '{"engagement":5,"preparation":5,"punctuality":5}', '', now() - interval '10 days'),
   -- Kwame teaches Web Dev to Yaw
   (gen_random_uuid(), 'a1111111-1111-1111-1111-111111111111', 'a3333333-3333-3333-3333-333333333333', 'Web Development', (now() - interval '8 days')::date, '10:00', 60, 'online', '', 'completed', 4, 5, 'Yaw already understands logic, just needed the syntax', 'Kwame helped me build my first Next.js app in one session!', '{"teaching_clarity":5,"patience":4,"punctuality":5}', '{"engagement":5,"preparation":5,"punctuality":4}', '', now() - interval '8 days')
 ON CONFLICT DO NOTHING;

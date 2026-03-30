@@ -151,20 +151,35 @@ export default function ProfilePage() {
   const initials = user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-navy-800">My Profile</h1>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-5 py-2 rounded-lg bg-navy-800 text-white text-sm font-semibold hover:bg-navy-700 transition-colors disabled:opacity-60"
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
-      </div>
+    <main>
+      {/* ─── Hero Banner ─── */}
+      <section className="relative bg-navy-800 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700" />
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-sky-400/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
+        </div>
+        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white">My Profile</h1>
+            <p className="mt-2 text-white/60">Manage your skills, courses, and preferences.</p>
+          </div>
+          <button onClick={handleSave} disabled={saving}
+            className="hidden sm:flex px-7 py-3 rounded-full bg-sky-500 text-white text-sm font-semibold hover:bg-sky-400 transition-colors disabled:opacity-60 shadow-lg shadow-sky-500/25">
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      </section>
+
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Mobile save button */}
+      <button onClick={handleSave} disabled={saving}
+        className="sm:hidden w-full py-3 rounded-full bg-navy-800 text-white text-sm font-semibold hover:bg-navy-700 transition-colors disabled:opacity-60 shadow-lg shadow-navy-800/25">
+        {saving ? "Saving..." : "Save Changes"}
+      </button>
 
       {/* Avatar + basic info */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <div className="flex items-center gap-4 mb-6">
           <div className="relative">
             <div className="w-16 h-16 bg-navy-800 rounded-full flex items-center justify-center text-white text-xl font-bold overflow-hidden">
@@ -259,7 +274,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Availability */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <h3 className="text-sm font-semibold text-navy-800 mb-3">Availability</h3>
         <div className="flex flex-wrap gap-2">
           {DAYS_OF_WEEK.map((day) => (
@@ -274,7 +289,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Profile Visibility */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <h3 className="text-sm font-semibold text-navy-800 mb-1">Profile Visibility</h3>
         <p className="text-xs text-gray-400 mb-3">Control who can discover your profile on the Explore page.</p>
         <div className="flex gap-2">
@@ -290,7 +305,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Skills to Teach */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <h3 className="text-sm font-semibold text-navy-800 mb-3">Skills I Can Teach</h3>
         <div className="flex flex-wrap gap-2 mb-3">
           {skillsToTeach.map((s, i) => (
@@ -323,7 +338,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Skills to Learn */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <h3 className="text-sm font-semibold text-navy-800 mb-3">Skills I Want to Learn</h3>
         <div className="flex flex-wrap gap-2 mb-3">
           {skillsToLearn.map((s, i) => (
@@ -357,7 +372,7 @@ export default function ProfilePage() {
 
       {/* Learning Goals */}
       {skillsToLearn.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <h3 className="text-sm font-semibold text-navy-800 mb-1">Learning Goals</h3>
           <p className="text-xs text-gray-400 mb-3">What do you want to achieve with each skill? (optional)</p>
           <div className="space-y-3">
@@ -377,7 +392,7 @@ export default function ProfilePage() {
       )}
 
       {/* Courses I Can Help With */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <h3 className="text-sm font-semibold text-navy-800 mb-1">Academic Courses I Can Help With</h3>
         <p className="text-xs text-gray-400 mb-3">Add courses by code so peers can find you for academic help.</p>
         <div className="flex flex-wrap gap-2 mb-3">
@@ -409,7 +424,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Courses I Need Help With */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <h3 className="text-sm font-semibold text-navy-800 mb-1">Academic Courses I Need Help With</h3>
         <p className="text-xs text-gray-400 mb-3">Add courses you&apos;re struggling with so tutors can find you.</p>
         <div className="flex flex-wrap gap-2 mb-3">
@@ -438,6 +453,7 @@ export default function ProfilePage() {
             <Plus className="w-4 h-4" /> Add
           </button>
         </div>
+      </div>
       </div>
     </main>
   );

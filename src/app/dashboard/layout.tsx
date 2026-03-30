@@ -115,7 +115,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {showNotifs && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowNotifs(false)} />
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-gray-200 shadow-lg z-20 overflow-hidden">
+                    <div className="fixed right-2 left-2 sm:left-auto sm:absolute sm:right-0 mt-2 sm:w-80 bg-white rounded-xl border border-gray-200 shadow-lg z-20 overflow-hidden" style={{ top: "auto" }}>
                       <div className="px-4 py-3 border-b border-gray-100 font-semibold text-sm text-navy-800">Notifications</div>
                       <div className="max-h-64 overflow-y-auto">
                         {notifications.length === 0 ? (
